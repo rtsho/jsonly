@@ -2,3 +2,4 @@
 .env
 **/__pycache__/
 backend/temp*.pdf
+serviceAccountKey.json
