@@ -5,12 +5,21 @@ import { delay } from '../utils/helpers';
 
 export const uploadAndAnalyzeDocument = async (file: File): Promise<any> => {
   try {
+    const user = auth.currentUser;
+    if (!user) {
+      throw new Error("User not authenticated");
+    }
+    const idToken = await user.getIdToken();
+
     const formData = new FormData();
     formData.append("file", file);
 
     const response = await fetch("http://127.0.0.1:8000/analyze-document/", {
       method: "POST",
       body: formData,
+      headers: {
+        Authorization: `Bearer ${idToken}`,
+      },
     });
 
     if (!response.ok) {
