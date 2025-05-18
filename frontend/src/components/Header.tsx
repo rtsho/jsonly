@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { FileText, LogIn, LogOut, Mail } from 'lucide-react';
+import { FileText, LogIn, LogOut, Mail, Menu } from 'lucide-react'; // Import Menu icon
 import { useAppContext } from '../context/AppContext';
 import AuthModal from './AuthModal';
 
-const Header = () => {
+const Header: React.FC = () => { // Removed onMenuToggle prop
   const { user, signInWithGoogle, signOut } = useAppContext();
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
@@ -39,7 +39,7 @@ const Header = () => {
                 Sign Out
               </button>
             </div>
-          ) : (
+            ) : (
             <button
               onClick={() => setIsAuthModalOpen(true)}
               className="flex items-center gap-2 px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded-lg text-white text-sm transition-colors"

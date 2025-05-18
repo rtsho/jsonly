@@ -16,11 +16,15 @@ interface AppContextType {
   loading: boolean;
   error: string | null;
   user: User | null;
+  message: string | null; // Added message state
+  isAuthModalOpen: boolean; // Added auth modal state
   uploadDocument: (file: File) => void;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
   signUpWithEmail: (email: string, password: string) => Promise<void>;
   signOut: () => Promise<void>;
+  setMessage: (message: string | null) => void; // Added setMessage function
+  setIsAuthModalOpen: (isOpen: boolean) => void; // Added setIsAuthModalOpen function
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -43,6 +47,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [user, setUser] = useState<User | null>(null);
+  const [message, setMessage] = useState<string | null>(null); // Added message state
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false); // Added auth modal state
 
   useEffect(() => {
     const unsubscribe = auth.onAuthStateChanged((user) => {
@@ -102,6 +108,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       await firebaseSignOut(auth);
       // Clear app contents on sign out
       setSummary(null);
+      setMessage(null); // Clear message on sign out
       // The FileUploader component will handle clearing its selectedFile state
       // based on the user state change.
     } catch (error) {
@@ -111,12 +118,13 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const uploadDocument = async (file: File) => {
     if (!user) {
-      setError('Please sign in to upload documents');
+      setIsAuthModalOpen(true);
       return;
     }
     
     setLoading(true);
     setError(null);
+    setMessage(null); // Clear message on new upload
     
     try {
       const result = await uploadAndAnalyzeDocument(file);
@@ -134,11 +142,15 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     loading,
     error,
     user,
+    message, // Added message to context value
+    isAuthModalOpen, // Added isAuthModalOpen to context value
     uploadDocument,
     signInWithGoogle,
     signInWithEmail,
     signUpWithEmail,
     signOut,
+    setMessage, // Added setMessage to context value
+    setIsAuthModalOpen, // Added setIsAuthModalOpen to context value
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

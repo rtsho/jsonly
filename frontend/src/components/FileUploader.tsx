@@ -9,7 +9,8 @@ const FileUploader = () => {
 
   // Clear selected file when user logs out
   useEffect(() => {
-    if (!user) {
+    // Clear selected file only when user logs out (user becomes null)
+    if (user === null) {
       setSelectedFile(null);
     }
   }, [user]);
