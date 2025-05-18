@@ -8,7 +8,7 @@ export const uploadAndAnalyzeDocument = async (file: File): Promise<any> => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("http://127.0.0.1:8000/upload-document/", {
+    const response = await fetch("http://127.0.0.1:8000/analyze-document/", {
       method: "POST",
       body: formData,
     });

@@ -14,8 +14,8 @@ app.add_middleware(
     allow_headers=["*"], # Allows all headers
 )
 
-@app.post("/upload-document/")
-async def upload_document(file: UploadFile = File(...)):
+@app.post("/analyze-document/")
+async def analyze_document(file: UploadFile = File(...)):
     """
     Receives a document (PDF or CSV) and processes it for AI summarization.
     """
