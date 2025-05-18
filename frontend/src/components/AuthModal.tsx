@@ -18,17 +18,28 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsAttemptingSignIn(true);
+
+
+    try {
     if (isSignUp) {
       setIsVerificationSent(true);
+      console.log("🔵 Calling signUpWithEmail...");
       await signUpWithEmail(email, password);
+      console.log("✅ signUpWithEmail completed");
     } else {
       await signInWithEmail(email, password);
     }
-    setIsAttemptingSignIn(false);
+
     if (!error) {
+      console.log("🔐 No error, calling onClose()");
       onClose();
     }
-  };
+  } catch (err) {
+    console.error("🔥 Unhandled error in handleEmailSubmit:", err);
+  } finally {
+    setIsAttemptingSignIn(false);
+  }
+};
 
   const handleGoogleSignIn = async () => {
     setIsAttemptingSignIn(true);
@@ -75,19 +86,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {isSignUp ? 'Create Account' : 'Sign In'}
         </h2>
         <div className="space-y-4">
-          <button
-            onClick={handleGoogleSignIn}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors flex items-center justify-center"
-          >
-            <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-              <path d="M44.5 20H24V28.8H36.4C35.4 33.1 32.1 36.4 27.8 37.8V44.1C34.7 43.4 40.3 39.2 43.5 33.1L44.5 20Z" fill="#4285F4"/>
-              <path d="M24 45C30.6 45 36.2 42.8 40.5 39.1L36.4 33.1C33.1 35.8 28.9 37.5 24 37.5C16.3 37.5 9.7 32.1 7.3 24.8L1 29.6C3.8 36.9 13.2 45 24 45Z" fill="#34A853"/>
-              <path d="M7.3 24.8C6.7 23.1 6.3 21.2 6.3 19.3C6.3 17.4 6.7 15.5 7.3 13.8L1 9C1 10.9 0.6 12.8 0.6 14.7C0.6 16.6 1 18.5 1.6 20.4L7.3 24.8Z" fill="#F9BC05"/>
-              <path d="M24 10.5C28.1 10.5 31.7 12.1 34.4 14.7L40.7 8.4C36.2 4.6 30.6 2.5 24 2.5C13.2 2.5 3.8 10.6 1 17.9L7.3 22.7C9.7 15.4 16.3 10.5 24 10.5Z" fill="#EA4335"/>
-            </svg>
-            Sign In with Google
-          </button>
-          <div className="text-center text-gray-400 text-sm">or</div>
           <form onSubmit={handleEmailSubmit} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-300 mb-1">
@@ -125,13 +123,33 @@ const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           {isAttemptingSignIn && error && (
             <p className="text-red-400 text-sm">{error}</p>
           )}
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="mt-4 text-sm text-purple-400 hover:text-purple-300"
-          >
-            {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
-          </button>
+          {isAttemptingSignIn && error && (
+            <p className="text-red-400 text-sm">{error}</p>
+          )}
         </div>
+        <div className="flex items-center my-6">
+          <div className="flex-grow border-t border-gray-600"></div>
+          <span className="flex-shrink mx-4 text-gray-400 text-sm">or</span>
+          <div className="flex-grow border-t border-gray-600"></div>
+        </div>
+        <button
+          onClick={handleGoogleSignIn}
+          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors flex items-center justify-center"
+        >
+          <svg className="w-5 h-5 mr-2" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M44.5 20H24V28.8H36.4C35.4 33.1 32.1 36.4 27.8 37.8V44.1C34.7 43.4 40.3 39.2 43.5 33.1L44.5 20Z" fill="#4285F4"/>
+            <path d="M24 45C30.6 45 36.2 42.8 40.5 39.1L36.4 33.1C33.1 35.8 28.9 37.5 24 37.5C16.3 37.5 9.7 32.1 7.3 24.8L1 29.6C3.8 36.9 13.2 45 24 45Z" fill="#34A853"/>
+            <path d="M7.3 24.8C6.7 23.1 6.3 21.2 6.3 19.3C6.3 17.4 6.7 15.5 7.3 13.8L1 9C1 10.9 0.6 12.8 0.6 14.7C0.6 16.6 1 18.5 1.6 20.4L7.3 24.8Z" fill="#F9BC05"/>
+            <path d="M24 10.5C28.1 10.5 31.7 12.1 34.4 14.7L40.7 8.4C36.2 4.6 30.6 2.5 24 2.5C13.2 2.5 3.8 10.6 1 17.9L7.3 22.7C9.7 15.4 16.3 10.5 24 10.5Z" fill="#EA4335"/>
+          </svg>
+          {isSignUp ? 'Sign Up with Google' : 'Sign In with Google'}
+        </button>
+        <button
+          onClick={() => setIsSignUp(!isSignUp)}
+          className="mt-8 text-sm text-purple-400 hover:text-purple-300 text-center w-full"
+        >
+          {isSignUp ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+        </button>
       </div>
     </div>
   );

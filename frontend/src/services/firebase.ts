@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore } from 'firebase/firestore';
+import { initializeFirestore } from 'firebase/firestore'; 
 import { getStorage } from 'firebase/storage';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 
@@ -14,10 +14,20 @@ const firebaseConfig = {
 };
 
 const app = initializeApp(firebaseConfig);
+
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({
   prompt: 'select_account'
 });
-export const db = getFirestore(app);
+
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: false,
+});
+
 export const storage = getStorage(app);
+// TEMP: Minimal Firestore write test for debugging
+// Paste this in your browser console after the app loads:
+// import { doc, setDoc } from "firebase/firestore";
+// import { db } from "./services/firebase";
+// setDoc(doc(db, "testCollection", "testDoc"), { test: "value" }).then(() => console.log("Minimal setDoc success")).catch(console.error);
