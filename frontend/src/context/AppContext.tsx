@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadAndAnalyzeDocument } from '../services/api';
-import { auth, googleProvider } from '../services/firebase';
+import { auth, googleProvider, addUserDocumentAnalysis } from '../services/firebase';
 import { db } from '../services/firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
@@ -268,6 +268,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const result = await uploadAndAnalyzeDocument(file);
       setSummary(result);
+      // Log the analysis in the user's documentAnalysis subcollection
+      if (user && file && file.name) {
+        await addUserDocumentAnalysis(user.uid, file.name, new Date().toISOString());
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');
       setSummary(null);
