@@ -2,18 +2,18 @@ import React from 'react';
 import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
 import FileUploadSection from './components/FileUploadSection';
 import Header from './components/Header';
-import Sidebar from './components/Sidebar'; // Import Sidebar component
+import Sidebar from './components/Sidebar';
 import { AppProvider, useAppContext } from './context/AppContext';
 import AuthModal from './components/AuthModal';
 import VerifyEmail from './components/VerifyEmail';
-import HomePage from './pages/HomePage'; // Import HomePage
-import TemplatePage from './pages/TemplatePage'; // Import TemplatePage
-import CredentialsPage from './pages/CredentialsPage'; // Import CredentialsPage
-import UsagePage from './pages/UsagePage'; // Import UsagePage
-import BillingPage from './pages/BillingPage'; // Import BillingPage
+import HomePage from './pages/HomePage';
+import TemplatePage from './pages/TemplatePage';
+import CredentialsPage from './pages/CredentialsPage';
+import UsagePage from './pages/UsagePage';
+import SubscriptionPage from './pages/SubscriptionPage';
 
 function AppWithModal() {
-  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false); // State for sidebar collapse
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
   const { isAuthModalOpen, setIsAuthModalOpen } = useAppContext();
 
   const toggleSidebar = () => {
@@ -33,7 +33,7 @@ function AppWithModal() {
             <Route path="/template" element={<TemplatePage />} />
             <Route path="/credentials" element={<CredentialsPage />} />
             <Route path="/usage" element={<UsagePage />} />
-            <Route path="/billing" element={<BillingPage />} />
+            <Route path="/subscription" element={<SubscriptionPage />} />
           </Routes>
           <footer className="mt-16 text-center text-gray-400 text-sm">
             <p>© {new Date().getFullYear()} PDF Analyzer. All rights reserved.</p>
