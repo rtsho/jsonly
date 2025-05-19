@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { uploadAndAnalyzeDocument } from '../services/api';
-import { auth, googleProvider, addUserDocumentAnalysis } from '../services/firebase';
+import { auth, googleProvider, addUserDocumentAnalysis, countUserPageAnalysesLast30Days, getUserDocument } from '../services/firebase';
 import { db } from '../services/firebase';
 import { setDoc, doc } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
@@ -143,6 +143,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
             clientSecret,
             email: user.email,
             createdAt: new Date().toISOString(),
+            plan: "free",
           },
           onSuccess: () => {
             console.log("Successfully wrote new Google user to Firestore:", user.uid);
@@ -260,17 +261,33 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       setIsAuthModalOpen(true);
       return;
     }
-    
+
+    // Unlimited for klahrich@gmail.com
+    if (user.email !== "klahrich@gmail.com") {
+      // Check plan and analysis count for free users
+      if (user && user.uid) {
+        // Get user document to check plan
+        const userDoc = await getUserDocument(user.uid);
+        if (userDoc && userDoc.plan === "free") {
+          const count = await countUserPageAnalysesLast30Days(user.uid);
+          if (count >= 1) { //TODO: change to 10
+            navigate('/billing');
+            return;
+          }
+        }
+      }
+    }
+
     setLoading(true);
     setError(null);
     setMessage(null); // Clear message on new upload
     
     try {
       const result = await uploadAndAnalyzeDocument(file);
-      setSummary(result);
+      setSummary(result.summary);
       // Log the analysis in the user's documentAnalysis subcollection
       if (user && file && file.name) {
-        await addUserDocumentAnalysis(user.uid, file.name, new Date().toISOString());
+        await addUserDocumentAnalysis(user.uid, file.name, new Date().toISOString(), result.nb_pages);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unknown error occurred');

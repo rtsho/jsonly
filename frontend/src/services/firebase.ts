@@ -61,18 +61,51 @@ export const getUserDocument = async (userId: string) => {
 export const addUserDocumentAnalysis = async (
   userId: string,
   documentName: string,
-  runAt: string
+  runAt: string,
+  nbPages: number
 ) => {
   try {
     const analysisCollectionRef = collection(db, "users", userId, "documentAnalysis");
     const docRef = await addDoc(analysisCollectionRef, {
       documentName,
       runAt,
+      nbPages
     });
     return docRef.id;
   } catch (error) {
     console.error("Error adding document analysis:", error);
     return undefined;
+  }
+};
+
+/**
+ * Counts the number of document analyses a user has run in the last 30 days.
+ * @param userId The UID of the user.
+ * @returns The count of analyses in the last 30 days.
+ */
+import { query, where, getDocs, Timestamp } from 'firebase/firestore';
+
+export const countUserPageAnalysesLast30Days = async (userId: string): Promise<number> => {
+  try {
+    const now = new Date();
+    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const analysisCollectionRef = collection(db, "users", userId, "documentAnalysis");
+    // We store runAt as a string, so we need to filter in JS after fetching
+    const snapshot = await getDocs(analysisCollectionRef);
+    let count = 0;
+    snapshot.forEach(docSnap => {
+      const data = docSnap.data();
+      if (data.runAt) {
+        const runAtDate = new Date(data.runAt);
+        if (runAtDate >= thirtyDaysAgo) {
+          count += data.nbPages;
+        }
+      }
+    });
+    return count;
+  } catch (error) {
+    console.error("Error counting user analyses:", error);
+    return 0;
   }
 };
 
