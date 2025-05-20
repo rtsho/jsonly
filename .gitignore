@@ -3,3 +3,5 @@
 **/__pycache__/
 backend/temp*.pdf
 serviceAccountKey.json
+node_modules/
+frontend/node_modules/

@@ -3,9 +3,18 @@ import { Upload, AlertCircle } from 'lucide-react';
 import FileUploader from './FileUploader';
 import JsonViewer from './JsonViewer';
 import { useAppContext } from '../context/AppContext';
+import { JsonEditor, githubDarkTheme  } from 'json-edit-react'
+
 
 const FileUploadSection = () => {
-  const { summary, loading, error } = useAppContext();
+  const { summary, loading, error, resetSummary, setSummary } = useAppContext();
+  const [tab, setTab] = React.useState<'view' | 'edit'>('view');
+  const [editableSummary, setEditableSummary] = React.useState<any>(summary);
+
+  // Keep editableSummary in sync with summary when a new document is analyzed
+  React.useEffect(() => {
+    setEditableSummary(summary);
+  }, [summary]);
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -35,7 +44,65 @@ const FileUploadSection = () => {
       <div className="order-2 lg:order-2">
         <div className="backdrop-blur-sm bg-gray-800/50 rounded-xl p-6 shadow-lg border border-gray-700 h-full">
           <h2 className="text-xl font-semibold mb-4 text-purple-300">JSON Summary</h2>
-          <JsonViewer summary={summary} loading={loading} />
+          {summary && (
+            <React.Fragment>
+              <div className="flex mb-4">
+                <button
+                  className={`px-4 py-2 rounded-tl rounded-bl font-medium ${
+                    tab === 'view'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-purple-700'
+                  }`}
+                  onClick={() => setTab('view')}
+                >
+                  View
+                </button>
+                <button
+                  className={`px-4 py-2 rounded-tr rounded-br font-medium ${
+                    tab === 'edit'
+                      ? 'bg-purple-600 text-white'
+                      : 'bg-gray-700 text-gray-300 hover:bg-purple-700'
+                  }`}
+                  onClick={() => setTab('edit')}
+                >
+                  Edit
+                </button>
+              </div>
+              {tab === 'view' ? (
+                <JsonViewer summary={editableSummary} loading={loading} />
+              ) : (
+                <div className="bg-gray-900 rounded-lg p-2 flex flex-col">
+                  <div className="flex justify-start mb-2">
+                    <button
+                      className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                      onClick={() => { setSummary(editableSummary); setTab('view'); }}
+                    >
+                      Save Changes & View
+                    </button>
+                  </div>
+
+                  <JsonEditor
+                    data={editableSummary}
+                    setData={setEditableSummary}
+                    theme={githubDarkTheme}
+                  />
+
+                  <div className="flex justify-start mb-2">
+                    <button
+                      className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+                      onClick={() => { setSummary(editableSummary); setTab('view'); }}
+                    >
+                      Save Changes & View
+                    </button>
+                  </div>
+                  
+                </div>
+              )}
+            </React.Fragment>
+          )}
+          {!summary && (
+            <JsonViewer summary={summary} loading={loading} />
+          )}
         </div>
       </div>
     </div>

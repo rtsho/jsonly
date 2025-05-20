@@ -28,6 +28,8 @@ interface AppContextType {
   signOut: () => Promise<void>;
   setMessage: (message: string | null) => void; // Added setMessage function
   setIsAuthModalOpen: (isOpen: boolean) => void; // Added setIsAuthModalOpen function
+  resetSummary: () => void;
+  setSummary: (summary: any) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -119,46 +121,30 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const signInWithGoogle = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-      // User signed in with Google, now add to Firestore
+      // User signed in with Google, now add to Firestore if not already present
       const user = auth.currentUser; // Get the current user
       if (user) {
-        // Generate clientId and clientSecret
-        const clientId = uuidv4();
-        const clientSecret = uuidv4();
+        // Check if user already exists in Firestore
+        const existingUserDoc = await getUserDocument(user.uid);
+        if (existingUserDoc) {
+          // User already exists, just navigate
+          console.log("Google user already exists in Firestore:", user.uid);
+          navigate('/');
+        } else {
+          const idToken = await user.getIdToken();
+          const response = await fetch('http://127.0.0.1:8000/register-client', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${idToken}`,
+            },
+          });
 
-        // Logging before Firestore write
-        console.log("Attempting to write new Google user to Firestore:", {
-          uid: user.uid,
-          clientId,
-          clientSecret,
-          email: user.email,
-        });
-
-        // Queue the write to Firestore
-        setFirestoreWriteRequest({
-          collectionName: "users",
-          docId: user.uid,
-          data: {
-            clientId,
-            clientSecret,
-            email: user.email,
-            createdAt: new Date().toISOString(),
-            plan: "free",
-          },
-          onSuccess: () => {
-            console.log("Successfully wrote new Google user to Firestore:", user.uid);
-            navigate('/'); // Navigate after successful write
-          },
-          onError: (firestoreError) => {
-            console.error("Firestore write error for Google user:", firestoreError);
-            setError(
-              firestoreError instanceof Error
-                ? firestoreError.message
-                : 'Failed to save Google user credentials to Firestore'
-            );
-            navigate('/'); // Navigate even on error, but show error
-          }
-        });
+          const data = await response.json();
+          console.log('Use these credentials for backend access:');
+          console.log('Client ID:', data.client_id);
+          console.log('Client Secret:', data.client_secret); 
+          navigate('/');
+        }
       } else {
         // Should not happen if signInWithPopup was successful
         console.error("Google sign-in successful, but user is null.");
@@ -174,7 +160,19 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
 
   const signInWithEmail = async (email: string, password: string) => {
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      const user = userCredential.user;
+
+      // Get ID token (JWT)
+      const idToken = await user.getIdToken();
+      const refreshToken = user.refreshToken;
+
+      console.log("ID Token:", idToken);
+      console.log("Refresh Token:", refreshToken);
+
+      localStorage.setItem("idToken", idToken);
+      localStorage.setItem("refreshToken", refreshToken);
+
       navigate('/');
     } catch (error) {
       setError('Invalid email or password');
@@ -186,39 +184,44 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
       if (userCredential.user) {
         // Generate clientId and clientSecret
-        const clientId = uuidv4();
-        const clientSecret = uuidv4();
+        // const clientId = uuidv4();
+        // const clientSecret = uuidv4();
 
-        // Logging before Firestore write
-        console.log("Attempting to write new user to Firestore:", {
-          uid: userCredential.user.uid,
-          clientId,
-          clientSecret,
-          email: userCredential.user.email,
+        const idToken = await userCredential.user.getIdToken();
+        const response = await fetch('http://127.0.0.1:8000/register-client', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${idToken}`,
+          },
         });
+
+        const data = await response.json();
+        console.log('Use these credentials for backend access:');
+        console.log('Client ID:', data.client_id);
+        console.log('Client Secret:', data.client_secret); 
 
         // Queue the write to Firestore
-        setFirestoreWriteRequest({
-          collectionName: "users",
-          docId: userCredential.user.uid,
-          data: {
-            clientId,
-            clientSecret,
-            email: userCredential.user.email,
-            createdAt: new Date().toISOString(),
-          },
-          onSuccess: () => {
-            console.log("Successfully wrote new user to Firestore:", userCredential.user.uid);
-          },
-          onError: (firestoreError) => {
-            console.error("Firestore write error:", firestoreError);
-            setError(
-              firestoreError instanceof Error
-                ? firestoreError.message
-                : 'Failed to save user credentials to Firestore'
-            );
-          }
-        });
+        // setFirestoreWriteRequest({
+        //   collectionName: "users",
+        //   docId: userCredential.user.uid,
+        //   data: {
+        //     clientId,
+        //     clientSecret,
+        //     email: userCredential.user.email,
+        //     createdAt: new Date().toISOString(),
+        //   },
+        //   onSuccess: () => {
+        //     console.log("Successfully wrote new user to Firestore:", userCredential.user.uid);
+        //   },
+        //   onError: (firestoreError) => {
+        //     console.error("Firestore write error:", firestoreError);
+        //     setError(
+        //       firestoreError instanceof Error
+        //         ? firestoreError.message
+        //         : 'Failed to save user credentials to Firestore'
+        //     );
+        //   }
+        // });
 
         const actionCodeSettings = {
           url: 'http://localhost:5173/verify-email',
@@ -297,6 +300,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     }
   };
 
+  const resetSummary = () => {
+    setSummary(null);
+    setError(null);
+  };
+
   const value = {
     summary,
     loading,
@@ -311,6 +319,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     signOut,
     setMessage, // Added setMessage to context value
     setIsAuthModalOpen, // Added setIsAuthModalOpen to context value
+  resetSummary, // Add resetSummary to context value
+  setSummary,
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

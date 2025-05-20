@@ -8,8 +8,12 @@ interface JsonViewerProps {
 
 const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
   const jsonRef = useRef<HTMLPreElement>(null);
-const [enableWebhook, setEnableWebhook] = React.useState(false); // New state for webhook toggle
+  const [enableWebhook, setEnableWebhook] = React.useState(false); // New state for webhook toggle
   const [webhookUrl, setWebhookUrl] = React.useState(''); // New state for webhook URL
+  // Popup state for saving template
+  const [showSavePopup, setShowSavePopup] = React.useState(false);
+  const [templateName, setTemplateName] = React.useState('');
+  const [folderName, setFolderName] = React.useState('Default');
 
   useEffect(() => {
     // Add a subtle animation when new data arrives
@@ -83,9 +87,57 @@ const [enableWebhook, setEnableWebhook] = React.useState(false); // New state fo
         )}
       </div>
       {!loading && summary && ( // Conditional rendering
-        <button className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded">
-          Save Template
-        </button>
+        <>
+          <button
+            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
+            onClick={() => setShowSavePopup(true)}
+          >
+            Save Template
+          </button>
+          {showSavePopup && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+              <div className="bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-sm">
+                <h3 className="text-lg font-bold mb-4 text-purple-300">Save Template</h3>
+                <div className="mb-3">
+                  <label className="block text-gray-300 mb-1">Template Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-gray-300 mb-1">Folder Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={folderName}
+                    onChange={e => setFolderName(e.target.value)}
+                  />
+                </div>
+                <div className="flex justify-end gap-2 mt-4">
+                  <button
+                    className="px-4 py-2 rounded bg-gray-700 text-gray-300 hover:bg-gray-600"
+                    onClick={() => setShowSavePopup(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
+                    onClick={() => {
+                      // TODO: Save logic here
+                      setShowSavePopup(false);
+                    }}
+                    disabled={!templateName || !folderName}
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
 {!loading && summary && ( // Conditional rendering for webhook section
         <div className="flex flex-col gap-2 p-4 bg-gray-800 rounded-lg">
@@ -109,14 +161,14 @@ const [enableWebhook, setEnableWebhook] = React.useState(false); // New state fo
                 className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded-md placeholder-gray-500 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
               />
               <div className="flex gap-2">
-                <button className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
-                  Test Webhook
+                <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
+                  🧪 Test Webhook 
                 </button>
-                <button className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
-                  Send Summary to Webhook
+                <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
+                  🚀 Send Summary to Webhook 
                 </button>
-                <button className="flex-1 px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
-                  Save Webhook
+                <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
+                  📘 Save Webhook 
                 </button>
               </div>
             </>
@@ -124,7 +176,7 @@ const [enableWebhook, setEnableWebhook] = React.useState(false); // New state fo
         </div>
       )}
 {/* API Usage Section */}
-      {!loading && summary && ( // Show this section only after analysis
+      {!loading && summary && enableWebhook && ( // Show this section only after analysis
         <div className="flex flex-col gap-2 p-4 bg-gray-800 rounded-lg text-gray-300">
           <h3 className="text-lg font-bold text-purple-400">🛠 Use Your API</h3>
           <p>
