@@ -1,3 +1,9 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Ensure black font for JSON editor inputs */
+.jer-input-text,
+.jer-key-edit {
+  color: #000 !important;
+}

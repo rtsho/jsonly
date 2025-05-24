@@ -1,5 +1,8 @@
 import React, { useEffect, useRef } from 'react';
 import { Loader2 } from 'lucide-react';
+import { useAppContext } from '../context/AppContext';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { db } from '../services/firebase';
 
 interface JsonViewerProps {
   summary: any;
@@ -14,6 +17,12 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
   const [showSavePopup, setShowSavePopup] = React.useState(false);
   const [templateName, setTemplateName] = React.useState('');
   const [folderName, setFolderName] = React.useState('Default');
+
+  // Popup state for saving template
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'loading' | 'success' | 'error'>('idle');
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+
+  const { user } = useAppContext();
 
   useEffect(() => {
     // Add a subtle animation when new data arrives
@@ -125,15 +134,57 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
                   </button>
                   <button
                     className="px-4 py-2 rounded bg-blue-600 text-white hover:bg-blue-700"
-                    onClick={() => {
-                      // TODO: Save logic here
-                      setShowSavePopup(false);
+                    onClick={async () => {
+                      setSaveStatus('loading');
+                      setSaveError(null);
+                      if (!user) {
+                        setSaveStatus('error');
+                        setSaveError('You must be logged in to save a template.');
+                        return;
+                      }
+                      const docId = `${user.uid}-${folderName}-${templateName}`;
+                      const docRef = doc(db, 'templates', docId);
+                      try {
+                        const docSnap = await getDoc(docRef);
+                        if (docSnap.exists()) {
+                          setSaveStatus('error');
+                          setSaveError(`Template "${templateName}" already exists in folder "${folderName}".`);
+                          return;
+                        }
+                        const templateData: any = {
+                          userId: user.uid,
+                          folder: folderName,
+                          template: templateName,
+                          summary,
+                          createdAt: new Date().toISOString(),
+                        };
+                        if (webhookUrl) {
+                          templateData.webhookUrl = webhookUrl;
+                        }
+                        await setDoc(docRef, templateData);
+                        setSaveStatus('success');
+                        setTimeout(() => {
+                          setShowSavePopup(false);
+                          setSaveStatus('idle');
+                          setTemplateName('');
+                          setFolderName('Default');
+                        }, 1500);
+                      } catch (err: any) {
+                        setSaveStatus('error');
+                        setSaveError(err.message || 'Failed to save template.');
+                      }
                     }}
-                    disabled={!templateName || !folderName}
+                    disabled={!templateName || !folderName || saveStatus === 'loading'}
                   >
                     Save
                   </button>
                 </div>
+                {saveStatus === 'error' && (
+                  <div className="mt-2 text-red-400 text-sm">{saveError}</div>
+                )}
+                {saveStatus === 'success' && (
+                  <div className="mt-2 text-green-400 text-sm">Template successfully saved!</div>
+                )}
               </div>
             </div>
           )}
@@ -167,8 +218,48 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
                 <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
                   🚀 Send Summary to Webhook 
                 </button>
-                <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
-                  📘 Save Webhook 
+                <button
+                  className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                  disabled={!webhookUrl}
+                  onClick={async () => {
+                    if (!user) {
+                      console.error("User not logged in");
+                      // TODO: Show user-friendly message or prompt login
+                      return;
+                    }
+
+                    if (!templateName || !folderName) {
+                      // Template name or folder not set, prompt user to save template first
+                      setShowSavePopup(true);
+                      return;
+                    }
+
+                    const docId = `${user.uid}-${folderName}-${templateName}`;
+                    const docRef = doc(db, 'templates', docId);
+
+                    try {
+                      const docSnap = await getDoc(docRef);
+
+                      if (docSnap.exists()) {
+                        // Template exists, update it with the webhook URL
+                        await setDoc(docRef, { webhookUrl }, { merge: true });
+                        console.log("Webhook URL saved successfully!");
+                        // TODO: Show success message to user
+                      } else {
+                        // Template does not exist with these names.
+                        // According to the task, if the template hasn't been saved, show the popup and save it.
+                        // This case implies the user entered names but the template wasn't saved, or state is out of sync.
+                        // Show the save popup to allow them to save the template (which will now include the webhookUrl if entered).
+                        setShowSavePopup(true);
+                        // TODO: Maybe show a message like "Template not found, please save the template first."
+                      }
+                    } catch (err: any) {
+                      console.error("Error saving webhook URL:", err);
+                      // TODO: Show error message to user
+                    }
+                  }}
+                >
+                  📘 Save Webhook
                 </button>
               </div>
             </>
