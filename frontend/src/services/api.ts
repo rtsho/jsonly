@@ -3,7 +3,7 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { delay } from '../utils/helpers';
 
-export const uploadAndAnalyzeDocument = async (file: File): Promise<any> => {
+export const uploadAndAnalyzeDocument = async (file: File, templateId: string | null = null): Promise<any> => {
   try {
     const user = auth.currentUser;
     if (!user) {
@@ -14,13 +14,27 @@ export const uploadAndAnalyzeDocument = async (file: File): Promise<any> => {
     const formData = new FormData();
     formData.append("file", file);
 
-    const response = await fetch("http://127.0.0.1:8000/analyze-document/", {
-      method: "POST",
-      body: formData,
-      headers: {
-        Authorization: `Bearer ${idToken}`,
-      },
-    });
+    let response; // Declare response here
+
+    if (templateId) { // Add templateId to formData if provided
+      formData.append("template_id", templateId);
+      response = await fetch("http://127.0.0.1:8000/analyze-with-template/", {
+                                  method: "POST",
+                                  body: formData,
+                                  headers: {
+                                    Authorization: `Bearer ${idToken}`,
+                                  },
+                                });
+    }
+    else{
+      response = await fetch("http://127.0.0.1:8000/analyze-document/", {
+                                  method: "POST",
+                                  body: formData,
+                                  headers: {
+                                    Authorization: `Bearer ${idToken}`,
+                                  },
+                                });
+    }
 
     if (!response.ok) {
       const errorData = await response.json();

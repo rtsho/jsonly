@@ -109,6 +109,28 @@ export const countUserPageAnalysesLast30Days = async (userId: string): Promise<n
   }
 };
 
+/**
+ * Retrieves templates for a specific user from the 'templates' collection.
+ * Assumes templates have a 'userId' field.
+ * @param userId The UID of the user.
+ * @returns An array of template documents, or an empty array if none are found or an error occurs.
+ */
+export const getUserTemplates = async (userId: string) => {
+  try {
+    const templatesCollectionRef = collection(db, "templates");
+    const q = query(templatesCollectionRef, where("userId", "==", userId));
+    const querySnapshot = await getDocs(q);
+    const templates: any[] = [];
+    querySnapshot.forEach((doc) => {
+      templates.push({ id: doc.id, ...doc.data() });
+    });
+    return templates;
+  } catch (error) {
+    console.error("Error getting user templates:", error);
+    return [];
+  }
+};
+
 // TEMP: Minimal Firestore write test for debugging
 // Paste this in your browser console after the app loads:
 // import { doc, setDoc } from "firebase/firestore";
