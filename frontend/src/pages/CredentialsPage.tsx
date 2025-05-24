@@ -126,12 +126,56 @@ const CredentialsPage = () => {
       {/* How to use the API Section */}
       <div className="mt-8 pt-6 border-t border-gray-700">
         <h2 className="text-xl font-bold mb-4">How to use the API</h2>
-        <p className="text-gray-400">
-          {/* Placeholder content for API usage instructions */}
-          Instructions on how to use the API will be provided here.
-          This section will explain authentication, available endpoints,
-          request/response formats, and examples.
-        </p>
+        <div className="text-gray-400">
+          <h3 className="text-lg font-semibold mb-2">📤 How to Call /analyze-with-template/</h3>
+          <p><strong>Method:</strong> POST</p>
+          <p><strong>URL:</strong> <code>https://your-api.com/analyze-with-template/</code></p>
+          
+          <h4 className="text-md font-semibold mt-4 mb-2">Headers:</h4>
+          <ul className="list-disc list-inside ml-4">
+            <li><code>client_id</code>: Your client ID</li>
+            <li><code>client_secret</code>: Your client secret</li>
+          </ul>
+
+          <h4 className="text-md font-semibold mt-4 mb-2">Form Data:</h4>
+          <ul className="list-disc list-inside ml-4">
+            <li><code>file</code>: The file to analyze (e.g., PDF, image, etc.)</li>
+            <li><code>template_id</code>: The ID of the analysis template to use</li>
+          </ul>
+
+          <h3 className="text-lg font-semibold mt-6 mb-2">✅ Example Using curl</h3>
+          <pre className="bg-gray-800 text-gray-200 p-3 rounded-md overflow-x-auto">
+            <code>
+curl -X POST https://your-api.com/analyze-with-template/ \<br/>
+  -H "client_id: YOUR_CLIENT_ID" \<br/>
+  -H "client_secret: YOUR_CLIENT_SECRET" \<br/>
+  -F "file=@/path/to/your/file.pdf" \<br/>
+  -F "template_id=your-template-id"
+            </code>
+          </pre>
+
+          <h3 className="text-lg font-semibold mt-6 mb-2">🧪 Example Using Python and requests</h3>
+          <pre className="bg-gray-800 text-gray-200 p-3 rounded-md overflow-x-auto">
+            <code>
+{`import requests
+
+url = "https://your-api.com/analyze-with-template/"
+headers = {
+    "client_id": "YOUR_CLIENT_ID",
+    "client_secret": "YOUR_CLIENT_SECRET"
+}
+files = {
+    "file": open("file.pdf", "rb")
+}
+data = {
+    "template_id": "your-template-id"
+}
+
+response = requests.post(url, headers=headers, files=files, data=data)
+print(response.json())`}
+            </code>
+          </pre>
+        </div>
       </div>
     </div>
   );
