@@ -21,6 +21,7 @@ interface AppContextType {
   user: User | null;
   message: string | null; // Added message state
   isAuthModalOpen: boolean; // Added auth modal state
+  selectedTemplateId: string | null; // Added selected template ID state
   uploadDocument: (file: File) => void;
   signInWithGoogle: () => Promise<void>;
   signInWithEmail: (email: string, password: string) => Promise<void>;
@@ -28,6 +29,7 @@ interface AppContextType {
   signOut: () => Promise<void>;
   setMessage: (message: string | null) => void; // Added setMessage function
   setIsAuthModalOpen: (isOpen: boolean) => void; // Added setIsAuthModalOpen function
+  setSelectedTemplateId: (templateId: string | null) => void; // Added setSelectedTemplateId function
   resetSummary: () => void;
   setSummary: (summary: any) => void;
 }
@@ -63,6 +65,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [message, setMessage] = useState<string | null>(null); // Added message state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false); // Added auth modal state
+  const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null); // Added selected template ID state
   
   // State for Firestore write requests
   const [firestoreWriteRequest, setFirestoreWriteRequest] = useState<FirestoreWriteRequest | null>(null);
@@ -286,7 +289,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setMessage(null); // Clear message on new upload
     
     try {
-      const result = await uploadAndAnalyzeDocument(file);
+      const result = await uploadAndAnalyzeDocument(file, selectedTemplateId); // Pass selectedTemplateId
       setSummary(result.summary);
       // Log the analysis in the user's documentAnalysis subcollection
       if (user && file && file.name) {
@@ -312,6 +315,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     user,
     message, // Added message to context value
     isAuthModalOpen, // Added isAuthModalOpen to context value
+    selectedTemplateId, // Added selectedTemplateId to context value
     uploadDocument,
     signInWithGoogle,
     signInWithEmail,
@@ -319,6 +323,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     signOut,
     setMessage, // Added setMessage to context value
     setIsAuthModalOpen, // Added setIsAuthModalOpen to context value
+    setSelectedTemplateId, // Added setSelectedTemplateId to context value
   resetSummary, // Add resetSummary to context value
   setSummary,
   };
