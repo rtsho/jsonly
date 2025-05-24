@@ -3,7 +3,7 @@ import FileUploadSection from '../components/FileUploadSection';
 
 const HomePage: React.FC = () => {
   return (
-    <div>
+    <div style={{ paddingTop: '60px' }}>
       <FileUploadSection />
     </div>
   );
