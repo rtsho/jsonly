@@ -210,14 +210,49 @@ async def analyze_document(
         raise HTTPException(status_code=500, detail=f"An error occurred during file upload: {e}")
     
 
+# Helper function to process a single file with a template
+async def _process_single_file_with_template(file: UploadFile, template_summary: Dict[str, Any]):
+    """Helper function to process a single file with a template."""
+    file_location = None
+    try:
+        # Save file temporarily
+        file_location = f"temp_{uuid.uuid4()}_{file.filename}" # Use uuid for unique filenames
+        with open(file_location, "wb+") as file_object:
+            file_object.write(await file.read()) # Use await file.read() for async
+
+        # Count pages
+        nb_pages = count_pdf_pages(file_location)
+
+        # Summarize with template
+        summary = ai_summarize_with_template(file_location, template_summary)
+
+        return {
+            "filename": file.filename,
+            "nb_pages": nb_pages,
+            "summary": summary
+        }
+
+    except Exception as e:
+        # Handle errors during processing
+        print(f"Error processing file {file.filename}: {e}")
+        return {
+            "filename": file.filename,
+            "error": str(e)
+        }
+    finally:
+        # Clean up temporary file
+        if file_location and os.path.exists(file_location):
+            os.remove(file_location)
+
+
 @app.post("/analyze-with-template/")
 async def analyze_with_template(
     file: UploadFile = File(...),
-    template: Dict[str, Any] = Body(...),
+    template_id: str = Body(...), # Accept template ID
     entity=Depends(get_current_entity)
 ):
     """
-    Receives a document (PDF or CSV) and processes it for AI summarization.
+    Receives a document (PDF or CSV) and processes it for AI summarization using a template.
     Only accessible to authenticated users.
     """
     allowed_extensions = ["pdf"]
@@ -227,25 +262,102 @@ async def analyze_with_template(
         raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
 
     try:
-        file_location = f"temp_{file.filename}"
-        with open(file_location, "wb+") as file_object:
-            file_object.write(file.file.read())
+        # Fetch template from Firebase
+        template_ref = db.collection("templates").document(template_id)
+        template_doc = template_ref.get()
 
-        nb_pages = count_pdf_pages(file_location)
+        if not template_doc.exists:
+            raise HTTPException(status_code=404, detail=f"Template with ID {template_id} not found.")
 
-        res = ai_summarize_with_template(file_location, template) 
+        template_data = template_doc.to_dict()
+        template_summary = template_data.get("summary")
+
+        if not template_summary:
+             raise HTTPException(status_code=400, detail=f"Template with ID {template_id} has no summary data.")
+
+        # Process the single file using the helper function
+        result = await _process_single_file_with_template(file, template_summary)
+
+        # Check if processing failed for the single file
+        if "error" in result:
+             raise HTTPException(status_code=500, detail=f"Error processing file {file.filename}: {result['error']}")
+
 
         return {
-            'nb_pages': nb_pages,
-            'summary': res,
+            'nb_pages': result.get('nb_pages', 0), # Get pages from result
+            'summary': result.get('summary'), # Get summary from result
             "received_by": entity["type"],
             "entity_details": entity["details"]
         }
 
+    except HTTPException as http_exc:
+        # Re-raise HTTPException to be handled by FastAPI
+        raise http_exc
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"An error occurred during file upload: {e}")
+        # Catch other potential errors (e.g., Firebase fetch errors)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
     
     
+@app.post("/analyze-many-with-template/")
+async def analyze_many_with_template(
+    files: List[UploadFile] = File(...), # Accept list of files
+    template_id: str = Body(...), # Accept template ID
+    entity=Depends(get_current_entity)
+):
+    """
+    Receives multiple documents (PDF or CSV) and processes them for AI summarization using a template.
+    Only accessible to authenticated users.
+    """
+    allowed_extensions = ["pdf"]
+    for file in files:
+        file_extension = file.filename.split(".")[-1].lower()
+        if file_extension not in allowed_extensions:
+            raise HTTPException(status_code=400, detail=f"Invalid file type for {file.filename}. Only PDF is allowed.")
+
+    if not files:
+         raise HTTPException(status_code=400, detail="No files provided.")
+
+
+    try:
+        # Fetch template from Firebase (same logic as analyze_with_template)
+        template_ref = db.collection("templates").document(template_id)
+        template_doc = template_ref.get()
+
+        if not template_doc.exists:
+            raise HTTPException(status_code=404, detail=f"Template with ID {template_id} not found.")
+
+        template_data = template_doc.to_dict()
+        template_summary = template_data.get("summary")
+
+        if not template_summary:
+             raise HTTPException(status_code=400, detail=f"Template with ID {template_id} has no summary data.")
+
+        all_summaries = []
+        total_pages = 0
+
+        # Process each file using the helper function
+        for file in files:
+            result = await _process_single_file_with_template(file, template_summary)
+            all_summaries.append(result)
+            if "nb_pages" in result and result["nb_pages"] > 0:
+                 total_pages += result["nb_pages"]
+
+
+        return {
+            'total_pages': total_pages,
+            'files_summary': all_summaries, # Return list of summaries for each file
+            "received_by": entity["type"],
+            "entity_details": entity["details"]
+        }
+
+    except HTTPException as http_exc:
+        # Re-raise HTTPException to be handled by FastAPI
+        raise http_exc
+    except Exception as e:
+        # Catch other potential errors (e.g., Firebase fetch errors)
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+
 @app.post("/harmonize-templates")
 async def harmonize_templates(payload: List[Dict[str, Any]] = Body(...)):
     result = ai_harmonize_templates(payload)
