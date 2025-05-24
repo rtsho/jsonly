@@ -13,7 +13,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onMenuToggle }) => {
   const menuItems = [
     { path: '/', icon: Home, label: 'Home' },
     { path: '/template', icon: File, label: 'Templates' },
-    { path: '/credentials', icon: Key, label: 'Credentials' },
+    { path: '/credentials', icon: Key, label: 'Credentials & API' },
     { path: '/usage', icon: Activity, label: 'Usage' },
     { path: '/subscription', icon: CreditCard, label: 'My Subscription' },
   ];
