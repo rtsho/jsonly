@@ -28,7 +28,10 @@ def ai_summarize_doc(filepath):
     )
 
     clean_text = response.text.replace("```json", "").replace("```", "")
-    return json.loads(clean_text)
+    data = json.loads(clean_text)
+    # Sort keys alphabetically
+    sorted_data = {key: data[key] for key in sorted(data)}
+    return sorted_data
 
 
 summarize_prompt_with_template = """
