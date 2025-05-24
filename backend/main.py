@@ -1,12 +1,13 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request
+from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from structure import summarize_doc
+from structure import ai_summarize_doc, ai_harmonize_templates, ai_summarize_with_template
 import PyPDF2
 import base64
 import bcrypt
 import uuid
 import httpx
+from typing import List, Dict, Any
 
 # Firebase Admin SDK imports
 import firebase_admin
@@ -196,7 +197,7 @@ async def analyze_document(
 
         nb_pages = count_pdf_pages(file_location)
 
-        res = summarize_doc(file_location)
+        res = ai_summarize_doc(file_location)
 
         return {
             'nb_pages': nb_pages,
@@ -207,6 +208,48 @@ async def analyze_document(
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during file upload: {e}")
+    
+
+@app.post("/analyze-with-template/")
+async def analyze_with_template(
+    file: UploadFile = File(...),
+    template: Dict[str, Any] = Body(...),
+    entity=Depends(get_current_entity)
+):
+    """
+    Receives a document (PDF or CSV) and processes it for AI summarization.
+    Only accessible to authenticated users.
+    """
+    allowed_extensions = ["pdf"]
+    file_extension = file.filename.split(".")[-1].lower()
+
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
+
+    try:
+        file_location = f"temp_{file.filename}"
+        with open(file_location, "wb+") as file_object:
+            file_object.write(file.file.read())
+
+        nb_pages = count_pdf_pages(file_location)
+
+        res = ai_summarize_with_template(file_location, template) 
+
+        return {
+            'nb_pages': nb_pages,
+            'summary': res,
+            "received_by": entity["type"],
+            "entity_details": entity["details"]
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred during file upload: {e}")
+    
+    
+@app.post("/harmonize-templates")
+async def harmonize_templates(payload: List[Dict[str, Any]] = Body(...)):
+    result = ai_harmonize_templates(payload)
+    return {"result": result}
 
 @app.get("/")
 async def read_root():
