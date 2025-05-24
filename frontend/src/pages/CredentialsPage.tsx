@@ -122,6 +122,17 @@ const CredentialsPage = () => {
           </p>
         </div>
       )}
+
+      {/* How to use the API Section */}
+      <div className="mt-8 pt-6 border-t border-gray-700">
+        <h2 className="text-xl font-bold mb-4">How to use the API</h2>
+        <p className="text-gray-400">
+          {/* Placeholder content for API usage instructions */}
+          Instructions on how to use the API will be provided here.
+          This section will explain authentication, available endpoints,
+          request/response formats, and examples.
+        </p>
+      </div>
     </div>
   );
 };
