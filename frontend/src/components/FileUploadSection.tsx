@@ -1,18 +1,29 @@
 import React from 'react';
-import { Upload, AlertCircle } from 'lucide-react';
+import { Upload, AlertCircle, X } from 'lucide-react';
 import FileUploader from './FileUploader';
 import JsonViewer from './JsonViewer';
 import { useAppContext } from '../context/AppContext';
 import { getUserTemplates } from '../services/firebase'; // Import getUserTemplates
 import { JsonEditor, githubDarkTheme  } from 'json-edit-react'
-
-
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { db } from '../services/firebase';
+import CreateTemplateModal from './CreateTemplateModal';
+ 
+ 
 const FileUploadSection = () => {
   const { summary, loading, error, resetSummary, setSummary, selectedTemplateId, setSelectedTemplateId, user } = useAppContext(); // Access user from context
   const [tab, setTab] = React.useState<'view' | 'edit'>('view');
   const [editableSummary, setEditableSummary] = React.useState<any>(summary);
   const [templates, setTemplates] = React.useState<any[]>([]); // State to hold fetched templates
 
+  // State for Create Template Modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = React.useState(false);
+  const [newTemplateJson, setNewTemplateJson] = React.useState<any>({});
+  const [newFolderName, setNewFolderName] = React.useState('');
+  const [newTemplateName, setNewTemplateName] = React.useState('');
+  const [saveStatus, setSaveStatus] = React.useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [saveError, setSaveError] = React.useState<string | null>(null);
+ 
   // Keep editableSummary in sync with summary when a new document is analyzed
   React.useEffect(() => {
     setEditableSummary(summary);
@@ -41,32 +52,109 @@ const FileUploadSection = () => {
     setSelectedTemplateId(event.target.value || null);
   };
 
+  // Handle Create Template Save
+  const handleCreateTemplateSave = async () => {
+    if (!user) return;
+    if (!newFolderName.trim() || !newTemplateName.trim()) {
+      setSaveError('Folder name and template name are required.');
+      setSaveStatus('error');
+      return;
+    }
+    setSaveStatus('saving');
+    setSaveError(null);
+    try {
+      const docRef = await addDoc(collection(db, 'templates'), {
+        userId: user.uid,
+        folder: newFolderName.trim(),
+        template: newTemplateName.trim(),
+        summary: newTemplateJson,
+        createdAt: serverTimestamp(),
+      });
+      // Update local state
+      setTemplates(prev => [
+        ...prev,
+        {
+          id: docRef.id,
+          userId: user.uid,
+          folder: newFolderName.trim(),
+          template: newTemplateName.trim(),
+          summary: newTemplateJson,
+          createdAt: new Date().toISOString(),
+        }
+      ]);
+      setSaveStatus('success');
+      setIsCreateModalOpen(false);
+      setNewFolderName('');
+      setNewTemplateName('');
+      setNewTemplateJson({});
+    } catch (err: any) {
+      setSaveStatus('error');
+      setSaveError(err.message || 'Failed to save template.');
+    }
+  };
+
+  // (renderCreateTemplateModal removed, replaced by CreateTemplateModal component)
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <CreateTemplateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateTemplateSave}
+        folderName={newFolderName}
+        setFolderName={setNewFolderName}
+        templateName={newTemplateName}
+        setTemplateName={setNewTemplateName}
+        templateJson={newTemplateJson}
+        setTemplateJson={setNewTemplateJson}
+        saveStatus={saveStatus}
+        saveError={saveError}
+      />
       <div className="order-1 lg:order-1">
         <div className="backdrop-blur-sm bg-gray-800/50 rounded-xl p-6 shadow-lg border border-gray-700 h-full">
           <h2 className="text-xl font-semibold mb-4 text-purple-300">Upload Document</h2>
           <FileUploader />
 
           {/* Template Selection */}
+          {/* Template Selection and Creation */}
           {user && ( // Conditionally render if user is logged in
-            <div className="mt-4">
-              <label htmlFor="template-select" className="block text-sm font-medium text-gray-400 mb-2">
-                Use Template:
-              </label>
-              <select
-                id="template-select"
-                className="block w-full pl-3 pr-10 py-2 text-base border-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md bg-gray-700 text-white"
-                onChange={handleTemplateChange}
-                value={selectedTemplateId || ''} // Control the select value
-              >
-                <option value="">None</option>
-                {templates.map(template => (
-                  <option key={template.id} value={template.id}>
-                    {`${template.folder}-${template.template}`}
-                  </option>
-                ))}
-              </select>
+            <div className="mt-4 flex items-end space-x-4"> {/* Flex container, align items to end */}
+              {/* Use Template Section */}
+              <div className="flex-1"> {/* Allows this section to grow */}
+                <label htmlFor="template-select" className="block text-sm font-medium text-gray-400 mb-2">
+                  Use Template:
+                </label>
+                <select
+                  id="template-select"
+                  className="block w-full pl-3 pr-10 py-2 text-base border-gray-600 focus:outline-none focus:ring-purple-500 focus:border-purple-500 sm:text-sm rounded-md bg-gray-700 text-white"
+                  onChange={handleTemplateChange}
+                  value={selectedTemplateId || ''} // Control the select value
+                >
+                  <option value="">AI Generated</option>
+                  {templates.map(template => (
+                    <option key={template.id} value={template.id}>
+                      {`${template.folder}-${template.template}`}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* OR Separator */}
+              <div className="flex items-center px-4"> {/* Increased horizontal padding */}
+                <div className="w-px bg-gray-600 h-8"></div> {/* Vertical divider, increased height */}
+                <span className="px-2 text-gray-400 text-sm">OR</span>
+                <div className="w-px bg-gray-600 h-8"></div> {/* Vertical divider, increased height */}
+              </div>
+
+              {/* Create Template Button */}
+              <div>
+                <button
+                  className="px-4 py-2 bg-gray-700 text-purple-300 rounded hover:bg-gray-600 transition"
+                  onClick={() => setIsCreateModalOpen(true)}
+                >
+                  Create Template
+                </button>
+              </div>
             </div>
           )}
 

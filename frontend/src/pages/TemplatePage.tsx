@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
-import { collection, query, where, getDocs, doc, setDoc } from 'firebase/firestore';
+import { collection, query, where, getDocs, doc, setDoc, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '../services/firebase';
 import { JsonEditor, githubDarkTheme } from 'json-edit-react';
+import CreateTemplateModal from '../components/CreateTemplateModal';
 import { deleteDoc } from 'firebase/firestore'; // Import deleteDoc
+import { X } from 'lucide-react';
 
 interface Template {
   id: string; // Firestore document ID
@@ -33,6 +35,14 @@ const TemplatePage = () => {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [copyStatus, setCopyStatus] = useState<'idle' | 'success' | 'error'>('idle'); // State for copy status
 
+
+  // For "Create Template" modal
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [newTemplateJson, setNewTemplateJson] = useState<any>({});
+  const [newFolderName, setNewFolderName] = useState('');
+  const [newTemplateName, setNewTemplateName] = useState('');
+  const [createSaveStatus, setCreateSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
+  const [createSaveError, setCreateSaveError] = useState<string | null>(null);
 
   // For webhook editing
   const [showWebhookModal, setShowWebhookModal] = useState(false);
@@ -301,10 +311,81 @@ const TemplatePage = () => {
 
   const folderNames = Object.keys(templates).sort();
 
+  // Handle Create Template Save
+  const handleCreateTemplateSave = async () => {
+    if (!user) return;
+    if (!newFolderName.trim() || !newTemplateName.trim()) {
+      setCreateSaveError('Folder name and template name are required.');
+      setCreateSaveStatus('error');
+      return;
+    }
+    setCreateSaveStatus('saving');
+    setCreateSaveError(null);
+    try {
+      const docRef = await addDoc(collection(db, 'templates'), {
+        userId: user.uid,
+        folder: newFolderName.trim(),
+        template: newTemplateName.trim(),
+        summary: newTemplateJson,
+        createdAt: serverTimestamp(),
+      });
+      // Update local state (grouped by folder)
+      setTemplates(prev => {
+        const updated = { ...prev };
+        const folder = newFolderName.trim();
+        const newTemplate: Template = {
+          id: docRef.id,
+          userId: user.uid,
+          folder,
+          template: newTemplateName.trim(),
+          summary: newTemplateJson,
+          createdAt: new Date().toISOString(),
+        };
+        if (!updated[folder]) {
+          updated[folder] = [];
+        }
+        updated[folder] = [...updated[folder], newTemplate];
+        return updated;
+      });
+      setCreateSaveStatus('success');
+      setIsCreateModalOpen(false);
+      setNewFolderName('');
+      setNewTemplateName('');
+      setNewTemplateJson({});
+    } catch (err: any) {
+      setCreateSaveStatus('error');
+      setCreateSaveError(err.message || 'Failed to save template.');
+    }
+  };
+
+  // Modal JSX
+  // (renderCreateTemplateModal removed, replaced by CreateTemplateModal component)
+
   return (
     <> {/* Wrap with React Fragment */}
+      <CreateTemplateModal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSave={handleCreateTemplateSave}
+        folderName={newFolderName}
+        setFolderName={setNewFolderName}
+        templateName={newTemplateName}
+        setTemplateName={setNewTemplateName}
+        templateJson={newTemplateJson}
+        setTemplateJson={setNewTemplateJson}
+        saveStatus={createSaveStatus}
+        saveError={createSaveError}
+      />
       <div className="container mx-auto px-4 py-8 max-w-xl">
-        <h1 className="text-2xl font-bold mb-6">My Templates</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">My Templates</h1>
+          <button
+            className="px-4 py-2 bg-gray-700 text-purple-300 rounded hover:bg-gray-600 transition"
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Create Template
+          </button>
+        </div>
         {harmonizeError && (
           <div className="text-red-500 mb-4">{harmonizeError}</div>
         )}
