@@ -7,9 +7,11 @@ import { db } from '../services/firebase';
 interface JsonViewerProps {
   summary: any;
   loading: boolean;
+  selectedTemplateId?: string | null;
+  templates?: any[];
 }
 
-const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
+const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading, selectedTemplateId, templates }) => {
   const jsonRef = useRef<HTMLPreElement>(null);
   const [enableWebhook, setEnableWebhook] = React.useState(false); // New state for webhook toggle
   const [webhookUrl, setWebhookUrl] = React.useState(''); // New state for webhook URL
@@ -33,6 +35,25 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
       }, 500);
     }
   }, [summary]);
+
+  // Pre-fill folder/template name when Save Template modal is opened
+  useEffect(() => {
+    if (showSavePopup) {
+      if (selectedTemplateId && templates && templates.length > 0) {
+        const found = templates.find((t) => t.id === selectedTemplateId);
+        if (found) {
+          setFolderName(found.folder || '');
+          setTemplateName(found.template || '');
+          return;
+        }
+      }
+      // If no template selected or not found, clear fields
+      setFolderName('');
+      setTemplateName('');
+    }
+    // Only run when popup opens, or when selectedTemplateId/templates change while popup is open
+    // eslint-disable-next-line
+  }, [showSavePopup, selectedTemplateId, templates]);
 
   const formatJson = (json: any): string => {
     if (!json) return '';
@@ -108,21 +129,21 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
               <div className="bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-sm">
                 <h3 className="text-lg font-bold mb-4 text-purple-300">Save Template</h3>
                 <div className="mb-3">
-                  <label className="block text-gray-300 mb-1">Template Name</label>
-                  <input
-                    type="text"
-                    className="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    value={templateName}
-                    onChange={e => setTemplateName(e.target.value)}
-                  />
-                </div>
-                <div className="mb-3">
                   <label className="block text-gray-300 mb-1">Folder Name</label>
                   <input
                     type="text"
                     className="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
                     value={folderName}
                     onChange={e => setFolderName(e.target.value)}
+                  />
+                </div>
+                <div className="mb-3">
+                  <label className="block text-gray-300 mb-1">Template Name</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 rounded bg-gray-800 text-gray-100 border border-gray-700 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    value={templateName}
+                    onChange={e => setTemplateName(e.target.value)}
                   />
                 </div>
                 <div className="flex justify-end gap-2 mt-4">
@@ -142,14 +163,26 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
                         setSaveError('You must be logged in to save a template.');
                         return;
                       }
-                      const docId = `${user.uid}-${folderName}-${templateName}`;
+                      let docId: string;
+                      let isUpdate = false;
+                      if (selectedTemplateId) {
+                        // Update existing template
+                        docId = selectedTemplateId;
+                        isUpdate = true;
+                      } else {
+                        // Create new template
+                        docId = `${user.uid}-${folderName}-${templateName}`;
+                      }
                       const docRef = doc(db, 'templates', docId);
                       try {
-                        const docSnap = await getDoc(docRef);
-                        if (docSnap.exists()) {
-                          setSaveStatus('error');
-                          setSaveError(`Template "${templateName}" already exists in folder "${folderName}".`);
-                          return;
+                        if (!isUpdate) {
+                          // For new templates, check if it already exists
+                          const docSnap = await getDoc(docRef);
+                          if (docSnap.exists()) {
+                            setSaveStatus('error');
+                            setSaveError(`Template "${templateName}" already exists in folder "${folderName}".`);
+                            return;
+                          }
                         }
                         const templateData: any = {
                           userId: user.uid,
@@ -161,6 +194,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading }) => {
                         if (webhookUrl) {
                           templateData.webhookUrl = webhookUrl;
                         }
+                        // Always overwrite the document (no merge) to ensure summary is replaced
                         await setDoc(docRef, templateData);
                         setSaveStatus('success');
                         setTimeout(() => {

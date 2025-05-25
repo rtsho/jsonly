@@ -204,7 +204,12 @@ const FileUploadSection = () => {
                 </button>
               </div>
               {tab === 'view' ? (
-                <JsonViewer summary={editableSummary} loading={loading} />
+                <JsonViewer
+                  summary={editableSummary}
+                  loading={loading}
+                  selectedTemplateId={selectedTemplateId}
+                  templates={templates}
+                />
               ) : (
                 <div className="bg-gray-900 rounded-lg p-2 flex flex-col">
                   <div className="flex justify-start mb-2">
@@ -236,7 +241,12 @@ const FileUploadSection = () => {
             </React.Fragment>
           )}
           {!summary && (
-            <JsonViewer summary={summary} loading={loading} />
+            <JsonViewer
+              summary={summary}
+              loading={loading}
+              selectedTemplateId={selectedTemplateId}
+              templates={templates}
+            />
           )}
         </div>
       </div>
