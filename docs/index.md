@@ -1,13 +1,15 @@
-# Welcome to MkDocs
+# Welcome to Jsonly
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+With Jsonly, you can extract structured information from any PDF.
 
-## Commands
+The template for the structure can be provided manually or generated with AI, from one or several PDFs.
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+See [examples](examples.md).
+
+## Endpoints
+
+* `/extract` - Extract structured information from a PDF, given a template.
+
 
 ## Project layout
 

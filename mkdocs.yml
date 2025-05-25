@@ -16,7 +16,9 @@ markdown_extensions:
   - pymdownx.superfences
   - admonition
   - pymdownx.details
+  - attr_list
 
 nav:
   - Home: index.md
   - Endpoints: endpoints.md
+  - Examples: examples.md
