@@ -92,6 +92,11 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading, selectedTempl
 
   return (
     <div className="flex flex-col gap-4">
+      {selectedTemplateId && (
+        <div className="text-xs text-gray-400 mb-2">
+          Template ID: <span className="font-mono">{selectedTemplateId}</span>
+        </div>
+      )}
       <div className="bg-gray-900 rounded-lg h-[400px] overflow-auto relative text-sm">
         {loading ? (
           <div className="absolute inset-0 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm">
