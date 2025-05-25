@@ -1,0 +1,57 @@
+{
+  "info": {
+    "name": "Analyze with Template API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Analyze with Template",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            {
+              "key": "file",
+              "type": "file",
+              "src": ""
+            },
+            {
+              "key": "template_id",
+              "type": "text",
+              "value": "your-template-id"
+            }
+          ]
+        },
+        "url": {
+          "raw": "https://your-api.com/analyze-with-template/",
+          "protocol": "https",
+          "host": [
+            "your-api",
+            "com"
+          ],
+          "path": [
+            "analyze-with-template",
+            ""
+          ]
+        },
+        "auth": {
+          "type": "basic",
+          "basic": [
+            {
+              "key": "username",
+              "value": "YOUR_CLIENT_ID",
+              "type": "string"
+            },
+            {
+              "key": "password",
+              "value": "YOUR_CLIENT_SECRET",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
