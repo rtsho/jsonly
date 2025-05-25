@@ -402,6 +402,7 @@ const TemplatePage = () => {
                       className="px-3 py-1 bg-purple-900 hover:bg-purple-800 text-white rounded text-sm"
                       onClick={() => handleHarmonize(folderName)}
                       disabled={harmonizingFolder === folderName}
+                      title="Create an AI-generated Template that merges the existing templates"
                     >
                       {harmonizingFolder === folderName ? 'Harmonizing...' : 'Harmonize'}
                     </button>
