@@ -12,6 +12,7 @@ from typing import List, Dict, Any
 # Firebase Admin SDK imports
 import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth, firestore
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 VALID_CLIENTS = {
     "my_client_id": "my_secret",
@@ -127,16 +128,23 @@ def get_current_entity(request: Request) -> dict:
         try:
             decoded = base64.b64decode(auth_header.split(" ")[1]).decode()
             client_id, client_secret = decoded.split(":", 1)
+            # print(f"client_id {client_id}")
+            # print(f"client_secret {client_secret}")
         except Exception:
             raise HTTPException(status_code=401, detail="Invalid Basic Auth format")
         
         try:
-            doc = db.collection("users").document(client_id).get()
-            if not doc.exists:
+            # doc = db.collection("users").document(client_id).get()
+            # if not doc.exists:
+            #     raise HTTPException(status_code=401, detail="Client not found")
+            query = db.collection("users").where(filter=FieldFilter("clientId", "==", client_id)).limit(1)
+            results = query.get()
+            if not results:
                 raise HTTPException(status_code=401, detail="Client not found")
+            doc = results[0]
             
             user_data = doc.to_dict()
-            expected_secret = user_data.get("client_secret")
+            expected_secret = user_data.get("clientSecret")
 
             if not expected_secret or not bcrypt.checkpw(client_secret.encode(), expected_secret.encode()):
                 raise HTTPException(status_code=401, detail="Invalid client credentials")
@@ -144,6 +152,7 @@ def get_current_entity(request: Request) -> dict:
             return {"type": "client", "details": {"client_id": client_id}}
 
         except Exception as e:
+            print(e)
             raise HTTPException(status_code=500, detail="Error verifying client credentials")
 
     raise HTTPException(status_code=401, detail="Unsupported Authorization scheme")
