@@ -212,14 +212,14 @@ const FileUploadSection = () => {
                 />
               ) : (
                 <div className="bg-gray-900 rounded-lg p-2 flex flex-col">
-                  <div className="flex justify-start mb-2">
+                  {/* <div className="flex justify-start mb-2">
                     <button
                       className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                       onClick={() => { setSummary(editableSummary); setTab('view'); }}
                     >
                       Save Changes & View
                     </button>
-                  </div>
+                  </div> */}
 
                   <JsonEditor
                     data={editableSummary}
