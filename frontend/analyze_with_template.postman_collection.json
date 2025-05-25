@@ -25,7 +25,7 @@
           ]
         },
         "url": {
-          "raw": "https://your-api.com/analyze-with-template/",
+          "raw": "https://jsonly.io/extract",
           "protocol": "https",
           "host": [
             "your-api",

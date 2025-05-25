@@ -128,9 +128,9 @@ const CredentialsPage = () => {
       <div className="mt-8 pt-6 border-t border-gray-700">
         <h2 className="text-xl font-bold mb-4">How to use the API</h2>
         <div className="text-gray-400">
-          <h3 className="text-lg font-semibold mb-2">📤 How to Call /analyze-with-template/</h3>
+          <h3 className="text-lg font-semibold mb-2">📤 How to Call /extract</h3>
           <p><strong>Method:</strong> POST</p>
-          <p><strong>URL:</strong> <code>https://your-api.com/analyze-with-template/</code></p>
+          <p><strong>URL:</strong> <code>https://jsonly.io/extract</code></p>
 
           <h4 className="text-md font-semibold mt-4 mb-2">Headers:</h4>
           <ul className="list-disc list-inside ml-4">
@@ -173,7 +173,7 @@ const CredentialsPage = () => {
                 <h3 className="text-lg font-semibold mb-2">✅ Example Using curl</h3>
                 <pre className="bg-gray-800 text-gray-200 p-3 rounded-md overflow-x-auto">
                   <code>
-curl -X POST https://your-api.com/analyze-with-template/ \<br/>
+curl -X POST https://jsonly.io/extract \<br/>
   -H "client_id: YOUR_CLIENT_ID" \<br/>
   -H "client_secret: YOUR_CLIENT_SECRET" \<br/>
   -F "file=@/path/to/your/file.pdf" \<br/>
@@ -189,7 +189,7 @@ curl -X POST https://your-api.com/analyze-with-template/ \<br/>
                   <code className="language-python">
 {`import requests
 
-url = "https://your-api.com/analyze-with-template/"
+url = "https://jsonly.io/extract"
 headers = {
     "client_id": "YOUR_CLIENT_ID",
     "client_secret": "YOUR_CLIENT_SECRET"
@@ -211,7 +211,7 @@ print(response.json())`}
               <div>
                 <h3 className="text-lg font-semibold mb-2">📦 Postman Collection</h3>
                 <p className="mb-4">
-                  Download the Postman collection below to easily test the <code>/analyze-with-template/</code> endpoint.
+                  Download the Postman collection below to easily test the <code>/extract</code> endpoint.
                   Import it into Postman and follow these steps:
                 </p>
                 <ul className="list-disc list-inside ml-4 mb-4">
@@ -249,7 +249,7 @@ print(response.json())`}
           ]
         },
         "url": {
-          "raw": "https://your-api.com/analyze-with-template/",
+          "raw": "https://jsonly.io/extract",
           "protocol": "https",
           "host": [
             "your-api",

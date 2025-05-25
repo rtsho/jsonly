@@ -254,7 +254,7 @@ async def _process_single_file_with_template(file: UploadFile, template_summary:
             os.remove(file_location)
 
 
-@app.post("/analyze-with-template/")
+@app.post("/extract")
 async def analyze_with_template(
     file: UploadFile = File(...),
     template_id: str = Body(...), # Accept template ID

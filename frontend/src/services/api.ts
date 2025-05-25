@@ -18,7 +18,7 @@ export const uploadAndAnalyzeDocument = async (file: File, templateId: string | 
 
     if (templateId) { // Add templateId to formData if provided
       formData.append("template_id", templateId);
-      response = await fetch("http://127.0.0.1:8000/analyze-with-template/", {
+      response = await fetch("http://127.0.0.1:8000/extract", {
                                   method: "POST",
                                   body: formData,
                                   headers: {
