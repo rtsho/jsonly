@@ -3,6 +3,8 @@ import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { delay } from '../utils/helpers';
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 export const uploadAndAnalyzeDocument = async (file: File, templateId: string | null = null): Promise<any> => {
   try {
     const user = auth.currentUser;
@@ -18,7 +20,7 @@ export const uploadAndAnalyzeDocument = async (file: File, templateId: string | 
 
     if (templateId) { // Add templateId to formData if provided
       formData.append("template_id", templateId);
-      response = await fetch("http://127.0.0.1:8000/extract", {
+      response = await fetch(`${backendUrl}/extract-with-template`, {
                                   method: "POST",
                                   body: formData,
                                   headers: {
@@ -27,7 +29,7 @@ export const uploadAndAnalyzeDocument = async (file: File, templateId: string | 
                                 });
     }
     else{
-      response = await fetch("http://127.0.0.1:8000/analyze-document/", {
+      response = await fetch(`${backendUrl}/extract`, {
                                   method: "POST",
                                   body: formData,
                                   headers: {

@@ -1,0 +1,16 @@
+[project]
+name = "jsonly-backend"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "bcrypt>=4.3.0",
+    "fastapi>=0.115.12",
+    "fastapi-cli>=0.0.7",
+    "firebase-admin>=6.8.0",
+    "google-genai>=1.18.0",
+    "pypdf2>=3.0.1",
+    "python-decouple>=3.8",
+    "python-multipart>=0.0.20",
+]

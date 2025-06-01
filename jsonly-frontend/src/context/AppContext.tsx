@@ -227,7 +227,7 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
         // });
 
         const actionCodeSettings = {
-          url: 'http://localhost:5173/verify-email',
+          url: '/verify-email',
           handleCodeInApp: false,
         };
         sendEmailVerification(userCredential.user, actionCodeSettings);

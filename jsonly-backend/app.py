@@ -8,6 +8,7 @@ import bcrypt
 import uuid
 import httpx
 from typing import List, Dict, Any
+from decouple import config
 
 # Firebase Admin SDK imports
 import firebase_admin
@@ -18,6 +19,8 @@ VALID_CLIENTS = {
     "my_client_id": "my_secret",
     "partner_backend": "secure_token_123"
 }
+
+SERVER_URL = config('SERVER_URL')
 
 
 # Initialize Firebase Admin SDK
@@ -97,7 +100,7 @@ async def register_client(request: Request):
     # Call regenerate-secret internally
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://localhost:8000/regenerate-client-secret",
+            f"{SERVER_URL}/regenerate-client-secret",
             headers={"X-User-UID": uid}
         )
 
@@ -184,8 +187,8 @@ def count_pdf_pages(pdf_path):
 
 
 
-@app.post("/analyze-document/")
-async def analyze_document(
+@app.post("/extract")
+async def extract(
     file: UploadFile = File(...),
     entity=Depends(get_current_entity)
 ):
@@ -254,8 +257,8 @@ async def _process_single_file_with_template(file: UploadFile, template_summary:
             os.remove(file_location)
 
 
-@app.post("/extract")
-async def analyze_with_template(
+@app.post("/extract-with-template")
+async def extract_with_template(
     file: UploadFile = File(...),
     template_id: str = Body(...), # Accept template ID
     entity=Depends(get_current_entity)
@@ -307,8 +310,8 @@ async def analyze_with_template(
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
     
     
-@app.post("/analyze-many-with-template/")
-async def analyze_many_with_template(
+@app.post("/extract-many-with-template/")
+async def extract_many_with_template(
     files: List[UploadFile] = File(...), # Accept list of files
     template_id: str = Body(...), # Accept template ID
     entity=Depends(get_current_entity)
