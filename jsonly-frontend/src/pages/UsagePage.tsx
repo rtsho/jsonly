@@ -223,7 +223,11 @@ const UsagePage: React.FC = () => {
         <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
           <h3 className="text-xl font-semibold text-white mb-2">Current Month Usage</h3>
           <p className="text-4xl font-bold text-white">{currentMonthPages}</p>
-          <p className="text-gray-400 mt-2">Pages this month</p>
+          {userPlan.pages > 0 ? (
+            <p className="text-gray-400 mt-2">{currentMonthPages} of {userPlan.pages} pages used this month</p>
+          ) : (
+            <p className="text-gray-400 mt-2">Pages this month</p>
+          )}
         </div>
 
         {/* Plan Info */}
@@ -310,9 +314,9 @@ const UsagePage: React.FC = () => {
                   y: {
                     ticks: {
                       color: '#aaa', // Gray text for y-axis labels
-                      beginAtZero: true,
                       stepSize: 1, // Display ticks at integer intervals
                     },
+                    min: 0, // Start at zero instead of using beginAtZero
                     grid: {
                       color: '#444', // Darker gray grid lines
                     },
