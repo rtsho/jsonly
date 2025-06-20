@@ -1,9 +1,63 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
+import { getUserDocument, getUserDocumentAnalyses } from '../services/firebase';
 
 const SubscriptionPage: React.FC = () => {
   const { user } = useAppContext();
-  const pagesLeft = 100; // This should come from your user's data
+  const [currentMonthPages, setCurrentMonthPages] = useState<number>(0);
+  const [userPlan, setUserPlan] = useState({
+    name: 'Basic',
+    pages: 0,
+    price: 1.95,
+    per: '/100 pages'
+  });
+  const [pagesRemaining, setPagesRemaining] = useState<number>(0);
+  const [loading, setLoading] = useState<boolean>(true);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch user document to get plan information
+        const userDoc = await getUserDocument(user.uid);
+        if (userDoc) {
+          const planName = userDoc.plan || 'Basic';
+          const plan = plans.find(p => p.name === planName) || plans[0];
+          setUserPlan(plan);
+        }
+
+        // Fetch all document analyses
+        const analysesData = await getUserDocumentAnalyses(user.uid);
+        
+        // Calculate current month pages
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const currentMonthAnalyses = analysesData.filter(analysis => {
+          const analysisDate = new Date(analysis.runAt);
+          return analysisDate >= firstDayOfMonth;
+        });
+        const monthTotal = currentMonthAnalyses.reduce((sum, analysis) => sum + (analysis.nbPages || 0), 0);
+        setCurrentMonthPages(monthTotal);
+
+        // Calculate pages remaining for the current plan
+        if (userPlan.pages > 0) {
+          setPagesRemaining(Math.max(0, userPlan.pages - monthTotal));
+        } else {
+          setPagesRemaining(0); // Basic plan is pay-as-you-go
+        }
+      } catch (err) {
+        console.error('Error fetching subscription data:', err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user, userPlan.pages]);
 
   const plans = [
     {
@@ -42,16 +96,28 @@ const SubscriptionPage: React.FC = () => {
       {/* Current Usage Banner */}
       {user && (
         <div className="bg-gray-800 rounded-lg p-6 mb-12">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-white">Current Usage</h2>
-              <p className="text-gray-300 mt-1">{pagesLeft} pages remaining this month</p>
+          {loading ? (
+            <p className="text-white text-center">Loading usage data...</p>
+          ) : (
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Current Usage</h2>
+                {userPlan.pages > 0 ? (
+                  <p className="text-gray-300 mt-1">
+                    {currentMonthPages} of {userPlan.pages} pages used ({pagesRemaining} remaining)
+                  </p>
+                ) : (
+                  <p className="text-gray-300 mt-1">
+                    {currentMonthPages} pages used this month (Pay as you go)
+                  </p>
+                )}
+              </div>
+              <div className="text-right">
+                <p className="text-sm text-gray-400">Need more pages?</p>
+                <p className="text-purple-400">Upgrade your plan below</p>
+              </div>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-400">Need more pages?</p>
-              <p className="text-purple-400">Upgrade your plan below</p>
-            </div>
-          </div>
+          )}
         </div>
       )}
 
