@@ -123,12 +123,7 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading, selectedTempl
       </div>
       {!loading && summary && ( // Conditional rendering
         <>
-          <button
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-            onClick={() => setShowSavePopup(true)}
-          >
-            Save Template
-          </button>
+          
           {showSavePopup && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-gray-900 p-6 rounded-lg shadow-lg w-full max-w-sm">
@@ -229,97 +224,8 @@ const JsonViewer: React.FC<JsonViewerProps> = ({ summary, loading, selectedTempl
           )}
         </>
       )}
-{!loading && summary && ( // Conditional rendering for webhook section
-        <div className="flex flex-col gap-2 p-4 bg-gray-800 rounded-lg">
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="enableWebhook"
-              checked={enableWebhook}
-              onChange={(e) => setEnableWebhook(e.target.checked)}
-              className="form-checkbox h-4 w-4 text-purple-600 rounded"
-            />
-            <label htmlFor="enableWebhook" className="text-gray-300">Enable Webhook</label>
-          </div>
-          {enableWebhook && ( // Show URL input and buttons only if webhook is enabled
-            <>
-              <input
-                type="text"
-                placeholder="Enter Webhook URL"
-                value={webhookUrl}
-                onChange={(e) => setWebhookUrl(e.target.value)}
-                className="w-full px-3 py-2 bg-gray-700 text-gray-300 rounded-md placeholder-gray-500 focus:outline-none focus:ring-purple-500 focus:border-purple-500"
-              />
-              <div className="flex gap-2">
-                <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
-                  🧪 Test Webhook 
-                </button>
-                <button className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed" disabled={!webhookUrl}>
-                  🚀 Send Summary to Webhook 
-                </button>
-                <button
-                  className="flex-1 px-2 py-2 bg-purple-600 hover:bg-purple-700 text-white font-bold rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                  disabled={!webhookUrl}
-                  onClick={async () => {
-                    if (!user) {
-                      console.error("User not logged in");
-                      // TODO: Show user-friendly message or prompt login
-                      return;
-                    }
 
-                    if (!templateName || !folderName) {
-                      // Template name or folder not set, prompt user to save template first
-                      setShowSavePopup(true);
-                      return;
-                    }
 
-                    const docId = `${user.uid}-${folderName}-${templateName}`;
-                    const docRef = doc(db, 'templates', docId);
-
-                    try {
-                      const docSnap = await getDoc(docRef);
-
-                      if (docSnap.exists()) {
-                        // Template exists, update it with the webhook URL
-                        await setDoc(docRef, { webhookUrl }, { merge: true });
-                        console.log("Webhook URL saved successfully!");
-                        // TODO: Show success message to user
-                      } else {
-                        // Template does not exist with these names.
-                        // According to the task, if the template hasn't been saved, show the popup and save it.
-                        // This case implies the user entered names but the template wasn't saved, or state is out of sync.
-                        // Show the save popup to allow them to save the template (which will now include the webhookUrl if entered).
-                        setShowSavePopup(true);
-                        // TODO: Maybe show a message like "Template not found, please save the template first."
-                      }
-                    } catch (err: any) {
-                      console.error("Error saving webhook URL:", err);
-                      // TODO: Show error message to user
-                    }
-                  }}
-                >
-                  📘 Save Webhook
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-{/* API Usage Section */}
-      {!loading && summary && enableWebhook && ( // Show this section only after analysis
-        <div className="flex flex-col gap-2 p-4 bg-gray-800 rounded-lg text-gray-300">
-          <h3 className="text-lg font-bold text-purple-400">🛠 Use Your API</h3>
-          <p>
-            <strong>POST</strong> your documents to:
-          </p>
-          <p className="ml-4 text-purple-300">
-            https://yourdomain.com/api/analyze
-          </p>
-          <p>
-            <strong>✔️ We’ll return the saved summary format to your webhook.</strong>
-          </p>
-        </div>
-      )}
     </div>
   );
 };

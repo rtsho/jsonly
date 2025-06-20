@@ -131,6 +131,35 @@ export const getUserTemplates = async (userId: string) => {
   }
 };
 
+/**
+ * Retrieves all document analyses for a specific user.
+ * @param userId The UID of the user.
+ * @returns An array of document analysis records, or an empty array if none are found or an error occurs.
+ */
+export const getUserDocumentAnalyses = async (userId: string) => {
+  try {
+    const analysisCollectionRef = collection(db, "users", userId, "documentAnalysis");
+    const snapshot = await getDocs(analysisCollectionRef);
+    const analyses: any[] = [];
+    
+    snapshot.forEach((doc) => {
+      analyses.push({ id: doc.id, ...doc.data() });
+    });
+    
+    // Sort by runAt date (newest first)
+    analyses.sort((a, b) => {
+      const dateA = new Date(a.runAt);
+      const dateB = new Date(b.runAt);
+      return dateB.getTime() - dateA.getTime();
+    });
+    
+    return analyses;
+  } catch (error) {
+    console.error("Error getting user document analyses:", error);
+    return [];
+  }
+};
+
 // TEMP: Minimal Firestore write test for debugging
 // Paste this in your browser console after the app loads:
 // import { doc, setDoc } from "firebase/firestore";

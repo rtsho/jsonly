@@ -32,6 +32,8 @@ interface AppContextType {
   setSelectedTemplateId: (templateId: string | null) => void; // Added setSelectedTemplateId function
   resetSummary: () => void;
   setSummary: (summary: any) => void;
+  currentTemplate: any | null; // NEW: holds the template from uploadAndAnalyzeDocument
+  setCurrentTemplate: (template: any | null) => void; // NEW: setter for currentTemplate
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -66,7 +68,8 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
   const [message, setMessage] = useState<string | null>(null); // Added message state
   const [isAuthModalOpen, setIsAuthModalOpen] = useState<boolean>(false); // Added auth modal state
   const [selectedTemplateId, setSelectedTemplateId] = useState<string | null>(null); // Added selected template ID state
-  
+  const [currentTemplate, setCurrentTemplate] = useState<any | null>(null); // NEW: holds the template from uploadAndAnalyzeDocument
+
   // State for Firestore write requests
   const [firestoreWriteRequest, setFirestoreWriteRequest] = useState<FirestoreWriteRequest | null>(null);
 
@@ -291,6 +294,11 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     try {
       const result = await uploadAndAnalyzeDocument(file, selectedTemplateId); // Pass selectedTemplateId
       setSummary(result.summary);
+      if (result.template !== undefined) {
+        setCurrentTemplate(result.template);
+      } else {
+        setCurrentTemplate(null);
+      }
       // Log the analysis in the user's documentAnalysis subcollection
       if (user && file && file.name) {
         await addUserDocumentAnalysis(user.uid, file.name, new Date().toISOString(), result.nb_pages);
@@ -324,8 +332,10 @@ export const AppProvider: React.FC<AppProviderProps> = ({ children }) => {
     setMessage, // Added setMessage to context value
     setIsAuthModalOpen, // Added setIsAuthModalOpen to context value
     setSelectedTemplateId, // Added setSelectedTemplateId to context value
-  resetSummary, // Add resetSummary to context value
-  setSummary,
+    resetSummary, // Add resetSummary to context value
+    setSummary,
+    currentTemplate, // NEW: expose currentTemplate in context
+    setCurrentTemplate, // NEW: expose setter
   };
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

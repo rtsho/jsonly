@@ -36,7 +36,7 @@ function AppWithModal() {
             <Route path="/subscription" element={<SubscriptionPage />} />
           </Routes>
           <footer className="mt-16 text-center text-gray-400 text-sm">
-            <p>© {new Date().getFullYear()} PDF Analyzer. All rights reserved.</p>
+            <p>© {new Date().getFullYear()} JSONly. All rights reserved.</p>
           </footer>
         </div>
       </div>

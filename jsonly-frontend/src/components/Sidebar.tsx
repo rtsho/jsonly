@@ -21,7 +21,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isCollapsed, onMenuToggle }) => {
   return (
     <div className={`flex flex-col bg-gray-800 text-gray-100 transition-all duration-300 ${isCollapsed ? 'w-16' : 'w-64'}`}>
       <div className={`flex items-center justify-between p-4 text-lg font-bold border-b border-gray-700 ${isCollapsed ? 'justify-center' : ''}`}>
-        {!isCollapsed && '🟣 PDF Analyzer'}
+        {!isCollapsed && '🟣 JSONly'}
         <button
           onClick={onMenuToggle}
           className="p-1 rounded-md hover:bg-gray-700 transition-colors"
