@@ -11,6 +11,7 @@ dependencies = [
     "fastapi-cli>=0.0.7",
     "firebase-admin>=6.8.0",
     "google-genai>=1.18.0",
+    "pydantic[email]>=2.11.5",
     "pypdf2>=3.0.1",
     "python-decouple>=3.8",
     "python-multipart>=0.0.20",

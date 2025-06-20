@@ -11,8 +11,9 @@ import CreateTemplateModal from './CreateTemplateModal';
  
  
 const FileUploadSection = () => {
-  const { summary, loading, error, resetSummary, setSummary, selectedTemplateId, setSelectedTemplateId, user } = useAppContext(); // Access user from context
+  const { summary, loading, error, resetSummary, setSummary, selectedTemplateId, setSelectedTemplateId, user, currentTemplate } = useAppContext(); // Access user and currentTemplate from context
   const [tab, setTab] = React.useState<'view' | 'edit'>('view');
+  // Removed showTemplateModal state as we're using CreateTemplateModal instead
   const [editableSummary, setEditableSummary] = React.useState<any>(summary);
   const [templates, setTemplates] = React.useState<any[]>([]); // State to hold fetched templates
 
@@ -150,7 +151,13 @@ const FileUploadSection = () => {
               <div>
                 <button
                   className="px-4 py-2 bg-gray-700 text-purple-300 rounded hover:bg-gray-600 transition"
-                  onClick={() => setIsCreateModalOpen(true)}
+                  onClick={() => {
+                    // Reset template data when creating a new template from scratch
+                    setNewTemplateJson({});
+                    setNewFolderName('');
+                    setNewTemplateName('');
+                    setIsCreateModalOpen(true);
+                  }}
                 >
                   Create Template
                 </button>
@@ -169,6 +176,7 @@ const FileUploadSection = () => {
             <h3 className="text-sm font-medium text-gray-400 mb-2">Instructions</h3>
             <ul className="text-sm text-gray-500 list-disc pl-5 space-y-1">
               <li>Upload a PDF or CSV file (max 10MB)</li>
+              <li> Provide your own JSON template or let our AI create one for you </li>
               <li>The file will be processed by our AI</li>
               <li>View the JSON summary on the right</li>
             </ul>
@@ -183,61 +191,35 @@ const FileUploadSection = () => {
             <React.Fragment>
               <div className="flex mb-4">
                 <button
-                  className={`px-4 py-2 rounded-tl rounded-bl font-medium ${
-                    tab === 'view'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-purple-700'
-                  }`}
-                  onClick={() => setTab('view')}
+                  className="px-4 py-2 rounded font-medium bg-purple-600 text-white w-full"
+                  onClick={() => {
+                    console.log('Save/Edit Template clicked. currentTemplate:', currentTemplate);
+                    // Pre-fill the CreateTemplateModal with current template data
+                    if (currentTemplate) {
+                      setNewTemplateJson(currentTemplate);
+                      // If we have folder and template name information, use it
+                      const selectedTemplate = templates.find(t => t.id === selectedTemplateId);
+                      if (selectedTemplate) {
+                        setNewFolderName(selectedTemplate.folder);
+                        setNewTemplateName(selectedTemplate.template);
+                      }
+                    } else {
+                      // If no template is selected, use the current summary
+                      setNewTemplateJson(summary);
+                    }
+                    setIsCreateModalOpen(true);
+                  }}
                 >
-                  View
-                </button>
-                <button
-                  className={`px-4 py-2 rounded-tr rounded-br font-medium ${
-                    tab === 'edit'
-                      ? 'bg-purple-600 text-white'
-                      : 'bg-gray-700 text-gray-300 hover:bg-purple-700'
-                  }`}
-                  onClick={() => setTab('edit')}
-                >
-                  Edit
+                  View/Edit Template
                 </button>
               </div>
-              {tab === 'view' ? (
-                <JsonViewer
-                  summary={editableSummary}
-                  loading={loading}
-                  selectedTemplateId={selectedTemplateId}
-                  templates={templates}
-                />
-              ) : (
-                <div className="bg-gray-900 rounded-lg p-2 flex flex-col">
-                  {/* <div className="flex justify-start mb-2">
-                    <button
-                      className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                      onClick={() => { setSummary(editableSummary); setTab('view'); }}
-                    >
-                      Save Changes & View
-                    </button>
-                  </div> */}
-
-                  <JsonEditor
-                    data={editableSummary}
-                    setData={setEditableSummary}
-                    theme={githubDarkTheme}
-                  />
-
-                  <div className="flex justify-start mb-2">
-                    <button
-                      className="px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
-                      onClick={() => { setSummary(editableSummary); setTab('view'); }}
-                    >
-                      Save Changes & View
-                    </button>
-                  </div>
-                  
-                </div>
-              )}
+              <JsonViewer
+                summary={editableSummary}
+                loading={loading}
+                selectedTemplateId={selectedTemplateId}
+                templates={templates}
+              />
+              {/* We no longer need the modal for viewing template as we're using CreateTemplateModal */}
             </React.Fragment>
           )}
           {!summary && (

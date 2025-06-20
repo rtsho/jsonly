@@ -16,7 +16,7 @@ const Header: React.FC = () => { // Removed onMenuToggle prop
           </div>
           <div>
             <h1 className="text-2xl sm:text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-400 to-purple-600">
-              Document Analyzer
+              PDF to JSON
             </h1>
             <p className="text-gray-400 text-sm mt-1">
               Upload your documents for instant analysis

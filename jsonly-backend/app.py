@@ -1,7 +1,7 @@
 from fastapi import FastAPI, File, UploadFile, HTTPException, Depends, Request, Body
 from fastapi.middleware.cors import CORSMiddleware
 import os
-from structure import ai_summarize_doc, ai_harmonize_templates, ai_summarize_with_template
+from structure import ai_harmonize_templates, ai_extract
 import PyPDF2
 import base64
 import bcrypt
@@ -9,6 +9,10 @@ import uuid
 import httpx
 from typing import List, Dict, Any
 from decouple import config
+from contextlib import asynccontextmanager
+import asyncio
+import uuid
+import uvicorn
 
 # Firebase Admin SDK imports
 import firebase_admin
@@ -23,13 +27,19 @@ VALID_CLIENTS = {
 SERVER_URL = config('SERVER_URL')
 
 
+async def lifespan(app: FastAPI):
+    app.state.tasks = {}
+    yield
+
+
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
     cred = credentials.Certificate("serviceAccountKey.json")
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
+
 
 # Configure CORS
 app.add_middleware(
@@ -110,6 +120,23 @@ async def register_client(request: Request):
     return response.json()
 
 
+def get_current_user(request: Request) -> dict:
+    auth_header = request.headers.get("Authorization")
+
+    if not auth_header:
+        raise HTTPException(status_code=401, detail="Missing Authorization header")
+
+    if not auth_header.startswith("Bearer "):
+        raise HTTPException(status_code=401, detail="Missing Bearer token")
+    
+    id_token = auth_header.split("Bearer ")[1]
+    try:
+        decoded_token = firebase_auth.verify_id_token(id_token)
+        return {"type": "user", "details": None}
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid Firebase token")
+
+
 def get_current_entity(request: Request) -> dict:
     """Authenticate either a Firebase user or a backend client."""
     auth_header = request.headers.get("Authorization")
@@ -161,6 +188,22 @@ def get_current_entity(request: Request) -> dict:
     raise HTTPException(status_code=401, detail="Unsupported Authorization scheme")
 
 
+@app.get("/status/{task_id}")
+async def status(task_id:str, entity=Depends(get_current_entity)):
+    if task_id not in app.state.tasks.keys():
+        raise HTTPException(status_code=404, detail=f"Task id {task_id} was not found.") 
+
+    return app.state.tasks[task_id].is_done()
+
+
+@app.get("/result/{task_id}")
+async def result(task_id:str, entity=Depends(get_current_entity)):
+    if task_id not in app.state.tasks.keys():
+        raise HTTPException(status_code=404, detail=f"Task id {task_id} was not found.") 
+
+    return app.state.tasks[task_id].result()
+
+
 def count_pdf_pages(pdf_path):
     """
     Counts the number of pages in a PDF file.
@@ -186,22 +229,10 @@ def count_pdf_pages(pdf_path):
         return -1
 
 
-
-@app.post("/extract")
-async def extract(
+async def _do_extract(
     file: UploadFile = File(...),
-    entity=Depends(get_current_entity)
+    template: str|None = None
 ):
-    """
-    Receives a document (PDF or CSV) and processes it for AI summarization.
-    Only accessible to authenticated users.
-    """
-    allowed_extensions = ["pdf"]
-    file_extension = file.filename.split(".")[-1].lower()
-
-    if file_extension not in allowed_extensions:
-        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
-
     try:
         file_location = f"temp_{file.filename}"
         with open(file_location, "wb+") as file_object:
@@ -209,63 +240,51 @@ async def extract(
 
         nb_pages = count_pdf_pages(file_location)
 
-        res = ai_summarize_doc(file_location)
+        res = await ai_extract(file_location, template)
+        summary = res['summary']
+        template = res['template']
 
         return {
             'nb_pages': nb_pages,
-            'summary': res,
-            "received_by": entity["type"],
-            "entity_details": entity["details"]
+            'summary': summary,
+            'template': template
         }
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"An error occurred during file upload: {e}")
     
 
-# Helper function to process a single file with a template
-async def _process_single_file_with_template(file: UploadFile, template_summary: Dict[str, Any]):
-    """Helper function to process a single file with a template."""
-    file_location = None
-    try:
-        # Save file temporarily
-        file_location = f"temp_{uuid.uuid4()}_{file.filename}" # Use uuid for unique filenames
-        with open(file_location, "wb+") as file_object:
-            file_object.write(await file.read()) # Use await file.read() for async
+#--- Explanations
+#
+# extract and async_extract will generate a tempalte and perform extraction using that template
+# extract_with_template and async_extract_with_template will take a template_id, fetch that template, and use it for extraction
 
-        # Count pages
-        nb_pages = count_pdf_pages(file_location)
-
-        # Summarize with template
-        summary = ai_summarize_with_template(file_location, template_summary)
-
-        return {
-            "filename": file.filename,
-            "nb_pages": nb_pages,
-            "summary": summary
-        }
-
-    except Exception as e:
-        # Handle errors during processing
-        print(f"Error processing file {file.filename}: {e}")
-        return {
-            "filename": file.filename,
-            "error": str(e)
-        }
-    finally:
-        # Clean up temporary file
-        if file_location and os.path.exists(file_location):
-            os.remove(file_location)
-
-
-@app.post("/extract-with-template")
-async def extract_with_template(
+@app.post("/extract")
+async def extract(
     file: UploadFile = File(...),
-    template_id: str = Body(...), # Accept template ID
+    entity=Depends(get_current_user)
+):
+    """
+    Receives a document (PDF or CSV) and processes it for AI summarization.
+    Only accessible to authenticated users on the website.
+    """
+    allowed_extensions = ["pdf"]
+    file_extension = file.filename.split(".")[-1].lower()
+
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
+    
+    return await _do_extract(file)
+
+
+@app.post("/async-extract")
+async def async_extract(
+    file: UploadFile = File(...),
     entity=Depends(get_current_entity)
 ):
     """
-    Receives a document (PDF or CSV) and processes it for AI summarization using a template.
-    Only accessible to authenticated users.
+    Receives a document (PDF or CSV) and processes it for AI summarization.
+    Only accessible to authenticated users (website or API).
     """
     allowed_extensions = ["pdf"]
     file_extension = file.filename.split(".")[-1].lower()
@@ -273,43 +292,73 @@ async def extract_with_template(
     if file_extension not in allowed_extensions:
         raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
 
-    try:
-        # Fetch template from Firebase
-        template_ref = db.collection("templates").document(template_id)
-        template_doc = template_ref.get()
-
-        if not template_doc.exists:
-            raise HTTPException(status_code=404, detail=f"Template with ID {template_id} not found.")
-
-        template_data = template_doc.to_dict()
-        template_summary = template_data.get("summary")
-
-        if not template_summary:
-             raise HTTPException(status_code=400, detail=f"Template with ID {template_id} has no summary data.")
-
-        # Process the single file using the helper function
-        result = await _process_single_file_with_template(file, template_summary)
-
-        # Check if processing failed for the single file
-        if "error" in result:
-             raise HTTPException(status_code=500, detail=f"Error processing file {file.filename}: {result['error']}")
-
-
-        return {
-            'nb_pages': result.get('nb_pages', 0), # Get pages from result
-            'summary': result.get('summary'), # Get summary from result
-            "received_by": entity["type"],
-            "entity_details": entity["details"]
-        }
-
-    except HTTPException as http_exc:
-        # Re-raise HTTPException to be handled by FastAPI
-        raise http_exc
-    except Exception as e:
-        # Catch other potential errors (e.g., Firebase fetch errors)
-        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+    task = asyncio.create_task(_do_extract(file))
+    task_id = str(uuid.uuid4())
+    app.state.tasks[task_id] = task
+    return task_id
     
+
+def get_template(template_id: str):
+    template_ref = db.collection("templates").document(template_id)
+    template_doc = template_ref.get()
+
+    if not template_doc.exists:
+        raise HTTPException(status_code=404, detail=f"Template with ID {template_id} not found.")
+
+    template_data = template_doc.to_dict()
+    template = template_data.get("summary")
+
+    if not template:
+        raise HTTPException(status_code=400, detail=f"Template with ID {template_id} has no summary data.")
     
+    return template
+
+
+@app.post("/extract-with-template")
+async def extract_with_template(
+    file: UploadFile = File(...),
+    template_id: str = Body(...), # Accept template ID
+    user=Depends(get_current_user)
+):
+    """
+    Receives a document (PDF or CSV) and processes it for AI summarization using a template.
+    Only accessible to authenticated users on the website.
+    """
+    allowed_extensions = ["pdf"]
+    file_extension = file.filename.split(".")[-1].lower()
+
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
+    
+    template = get_template(template_id)
+    
+    return await _do_extract(file, template)
+
+
+@app.post("/async-extract-with-template")
+async def async_extract_with_template(
+    file: UploadFile = File(...),
+    template_id: str = Body(...), # Accept template ID
+    entity=Depends(get_current_entity)
+):
+    """
+    Receives a document (PDF or CSV) and processes it for AI summarization using a template.
+    Only accessible to authenticated users (website or API).
+    """
+    allowed_extensions = ["pdf"]
+    file_extension = file.filename.split(".")[-1].lower()
+
+    if file_extension not in allowed_extensions:
+        raise HTTPException(status_code=400, detail="Invalid file type. Only PDF is allowed.")
+    
+    template = get_template(template_id)
+    
+    task = asyncio.create_task(_do_extract(file, template))
+    task_id = str(uuid.uuid4())
+    app.state.tasks[task_id] = task
+    return task_id
+
+        
 @app.post("/extract-many-with-template/")
 async def extract_many_with_template(
     files: List[UploadFile] = File(...), # Accept list of files
@@ -365,6 +414,7 @@ async def extract_many_with_template(
     except HTTPException as http_exc:
         # Re-raise HTTPException to be handled by FastAPI
         raise http_exc
+    
     except Exception as e:
         # Catch other potential errors (e.g., Firebase fetch errors)
         raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
@@ -372,9 +422,15 @@ async def extract_many_with_template(
 
 @app.post("/harmonize-templates")
 async def harmonize_templates(payload: List[Dict[str, Any]] = Body(...)):
-    result = ai_harmonize_templates(payload)
+    result = await ai_harmonize_templates(payload)
     return {"result": result}
 
 @app.get("/")
 async def read_root():
     return {"message": "FastAPI backend is running"}
+
+def main():
+    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)
+
+if __name__ == '__main__':
+    main()

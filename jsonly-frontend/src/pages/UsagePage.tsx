@@ -1,10 +1,297 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { useAppContext } from '../context/AppContext';
+import { getUserDocumentAnalyses, getUserDocument } from '../services/firebase';
+
+interface DocumentAnalysis {
+  id: string;
+  documentName: string;
+  runAt: string;
+  nbPages: number;
+}
+
+interface UsageData {
+  date: string;
+  pages: number;
+}
+
+interface UserPlan {
+  name: string;
+  pages: number;
+  price: number;
+  per: string;
+}
 
 const UsagePage: React.FC = () => {
+  const { user } = useAppContext();
+  const [analyses, setAnalyses] = useState<DocumentAnalysis[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [totalPages, setTotalPages] = useState<number>(0);
+  const [currentMonthPages, setCurrentMonthPages] = useState<number>(0);
+  const [chartData, setChartData] = useState<UsageData[]>([]);
+  const [userPlan, setUserPlan] = useState<UserPlan>({
+    name: 'Basic',
+    pages: 0,
+    price: 1.95,
+    per: '/100 pages'
+  });
+  const [pagesRemaining, setPagesRemaining] = useState<number>(0);
+
+  // Plans data (same as in SubscriptionPage)
+  const plans = [
+    {
+      name: 'Basic',
+      pages: 0,
+      price: 1.95,
+      per: '/100 pages',
+    },
+    {
+      name: 'Pro',
+      pages: 1000,
+      price: 9.95,
+      per: '/month',
+    },
+    {
+      name: 'Business',
+      pages: 10000,
+      price: 49.95,
+      per: '/month',
+    }
+  ];
+
+  useEffect(() => {
+    const fetchData = async () => {
+      if (!user) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        // Fetch user document to get plan information
+        const userDoc = await getUserDocument(user.uid);
+        if (userDoc) {
+          const planName = userDoc.plan || 'Basic';
+          const plan = plans.find(p => p.name === planName) || plans[0];
+          setUserPlan(plan);
+        }
+
+        // Fetch all document analyses
+        const analysesData = await getUserDocumentAnalyses(user.uid);
+        setAnalyses(analysesData);
+
+        // Calculate total pages
+        const total = analysesData.reduce((sum, analysis) => sum + (analysis.nbPages || 0), 0);
+        setTotalPages(total);
+
+        // Calculate current month pages
+        const now = new Date();
+        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+        const currentMonthAnalyses = analysesData.filter(analysis => {
+          const analysisDate = new Date(analysis.runAt);
+          return analysisDate >= firstDayOfMonth;
+        });
+        const monthTotal = currentMonthAnalyses.reduce((sum, analysis) => sum + (analysis.nbPages || 0), 0);
+        setCurrentMonthPages(monthTotal);
+
+        // Calculate pages remaining for the current plan
+        if (userPlan.pages > 0) {
+          setPagesRemaining(Math.max(0, userPlan.pages - monthTotal));
+        } else {
+          setPagesRemaining(0); // Basic plan is pay-as-you-go
+        }
+
+        // Prepare chart data (last 30 days)
+        const last30Days = new Date();
+        last30Days.setDate(last30Days.getDate() - 30);
+        
+        // Create a map for each day in the last 30 days
+        const dailyUsageMap = new Map<string, number>();
+        
+        // Initialize with zero values for all days
+        for (let i = 0; i < 30; i++) {
+          const date = new Date();
+          date.setDate(date.getDate() - i);
+          const dateStr = date.toISOString().split('T')[0];
+          dailyUsageMap.set(dateStr, 0);
+        }
+        
+        // Fill in actual usage data
+        analysesData.forEach(analysis => {
+          const analysisDate = new Date(analysis.runAt);
+          if (analysisDate >= last30Days) {
+            const dateStr = analysisDate.toISOString().split('T')[0];
+            const currentPages = dailyUsageMap.get(dateStr) || 0;
+            dailyUsageMap.set(dateStr, currentPages + (analysis.nbPages || 0));
+          }
+        });
+        
+        // Convert map to array and sort by date
+        const chartDataArray: UsageData[] = Array.from(dailyUsageMap.entries())
+          .map(([date, pages]) => ({ date, pages }))
+          .sort((a, b) => a.date.localeCompare(b.date));
+        
+        setChartData(chartDataArray);
+      } catch (err) {
+        console.error('Error fetching usage data:', err);
+        setError('Failed to load usage data. Please try again later.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [user]);
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  // Format date for chart
+  const formatChartDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+
+  // Find the maximum pages value for scaling the chart
+  const maxPages = Math.max(...chartData.map(item => item.pages), 1);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+        <p className="text-white">Loading usage data...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+        <p className="text-white">Please sign in to view your usage data.</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 text-center">
+        <p className="text-red-500">{error}</p>
+      </div>
+    );
+  }
+
   return (
-    <div>
-      <h1>Usage Page Content</h1>
-      <p>Placeholder content for the Usage page.</p>
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="text-center mb-12">
+        <h1 className="text-4xl font-bold text-white mb-4">My Usage</h1>
+        <p className="text-xl text-gray-300">Track your document analysis activity</p>
+      </div>
+
+      {/* Usage Summary */}
+      <div className="grid md:grid-cols-3 gap-8 mb-12">
+        {/* Total Pages */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-2">Total Pages Processed</h3>
+          <p className="text-4xl font-bold text-white">{totalPages}</p>
+          <p className="text-gray-400 mt-2">Lifetime</p>
+        </div>
+
+        {/* Current Month Pages */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-2">Current Month Usage</h3>
+          <p className="text-4xl font-bold text-white">{currentMonthPages}</p>
+          <p className="text-gray-400 mt-2">Pages this month</p>
+        </div>
+
+        {/* Plan Info */}
+        <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+          <h3 className="text-xl font-semibold text-white mb-2">Current Plan</h3>
+          <p className="text-4xl font-bold text-white">{userPlan.name}</p>
+          {userPlan.pages > 0 ? (
+            <p className="text-gray-400 mt-2">
+              {pagesRemaining} of {userPlan.pages} pages remaining
+            </p>
+          ) : (
+            <p className="text-gray-400 mt-2">Pay as you go (${userPlan.price}/100 pages)</p>
+          )}
+        </div>
+      </div>
+
+      {/* Usage Chart - Simple CSS-based chart */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-12">
+        <h3 className="text-xl font-semibold text-white mb-6">Usage Over Time (Last 30 Days)</h3>
+        
+        <div className="overflow-x-auto">
+          <div className="min-w-full" style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
+            {chartData.map((item, index) => {
+              const height = (item.pages / maxPages) * 100;
+              return (
+                <div key={index} style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                  <div 
+                    className="bg-purple-600 hover:bg-purple-500 transition-colors duration-200 w-full rounded-t"
+                    style={{ height: `${height}%`, minHeight: item.pages > 0 ? '5px' : '0' }}
+                    title={`${item.pages} pages on ${formatChartDate(item.date)}`}
+                  ></div>
+                  {index % 5 === 0 && (
+                    <div className="text-xs text-gray-400 mt-2 rotate-45 origin-left">
+                      {formatChartDate(item.date)}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+
+      {/* Recent Activity Table */}
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700">
+        <h3 className="text-xl font-semibold text-white mb-6">Recent Activity</h3>
+        
+        {analyses.length === 0 ? (
+          <p className="text-gray-400 text-center py-4">No document analyses found.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead>
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Document
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Date
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-400 uppercase tracking-wider">
+                    Pages
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-700">
+                {analyses.slice(0, 10).map((analysis) => (
+                  <tr key={analysis.id}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {analysis.documentName}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {formatDate(analysis.runAt)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {analysis.nbPages}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -8,24 +8,27 @@ const SubscriptionPage: React.FC = () => {
   const plans = [
     {
       name: 'Basic',
-      pages: 100,
-      price: 20,
+      pages: 0,
+      price: 1.95,
+      per: '/100 pages',
       description: 'Perfect for occasional document analysis',
-      features: ['100 pages per month', 'Basic document analysis', 'Email support']
+      features: ['Pay as you go', 'Basic document analysis', 'Email support']
     },
     {
       name: 'Pro',
-      pages: 500,
-      price: 50,
+      pages: 1000,
+      price: 9.95,
+      per: '/month',
       description: 'Ideal for regular document processing',
-      features: ['500 pages per month', 'Advanced document analysis', 'Priority support']
+      features: ['1000 pages per month', 'Advanced document analysis', 'Priority support']
     },
     {
       name: 'Business',
-      pages: 2000,
-      price: 100,
+      pages: 10000,
+      price: 49.95,
+      per: '/month',
       description: 'Best for high-volume processing',
-      features: ['2000 pages per month', 'Enterprise-grade analysis', '24/7 dedicated support']
+      features: ['10000 pages per month', 'Enterprise-grade analysis', '24/7 dedicated support']
     }
   ];
 
@@ -37,18 +40,20 @@ const SubscriptionPage: React.FC = () => {
       </div>
 
       {/* Current Usage Banner */}
-      <div className="bg-gray-800 rounded-lg p-6 mb-12">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-white">Current Usage</h2>
-            <p className="text-gray-300 mt-1">{pagesLeft} pages remaining this month</p>
-          </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-400">Need more pages?</p>
-            <p className="text-purple-400">Upgrade your plan below</p>
+      {user && (
+        <div className="bg-gray-800 rounded-lg p-6 mb-12">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-xl font-semibold text-white">Current Usage</h2>
+              <p className="text-gray-300 mt-1">{pagesLeft} pages remaining this month</p>
+            </div>
+            <div className="text-right">
+              <p className="text-sm text-gray-400">Need more pages?</p>
+              <p className="text-purple-400">Upgrade your plan below</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Pricing Grid */}
       <div className="grid md:grid-cols-3 gap-8">
@@ -57,7 +62,7 @@ const SubscriptionPage: React.FC = () => {
             <h3 className="text-2xl font-bold text-white">{plan.name}</h3>
             <div className="mt-4 flex items-baseline">
               <span className="text-4xl font-bold text-white">${plan.price}</span>
-              <span className="ml-2 text-gray-400">/month</span>
+              <span className="ml-2 text-gray-400">{plan.per}</span>
             </div>
             <p className="mt-4 text-gray-300">{plan.description}</p>
             <ul className="mt-6 space-y-4">

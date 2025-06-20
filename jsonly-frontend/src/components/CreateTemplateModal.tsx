@@ -64,7 +64,7 @@ const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-gray-800 p-6 rounded-lg w-full max-w-lg relative">
+      <div className="bg-gray-800 p-6 rounded-lg w-full max-w-lg max-h-[90vh] relative overflow-hidden flex flex-col">
         <button
           onClick={onClose}
           className="absolute right-4 top-4 text-gray-400 hover:text-gray-300"
@@ -74,7 +74,7 @@ const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
         <h2 className="text-xl font-semibold text-purple-300 mb-4">
           Create Template
         </h2>
-        <div className="mb-4">
+        <div className="mb-4 overflow-y-auto flex-shrink-0">
           <label className="block text-sm font-medium text-gray-400 mb-1">
             Folder Name
           </label>
@@ -86,7 +86,7 @@ const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
             placeholder="Enter folder name"
           />
         </div>
-        <div className="mb-4">
+        <div className="mb-4 overflow-y-auto flex-shrink-0">
           <label className="block text-sm font-medium text-gray-400 mb-1">
             Template Name
           </label>
@@ -98,41 +98,44 @@ const CreateTemplateModal: React.FC<CreateTemplateModalProps> = ({
             placeholder="Enter template name"
           />
         </div>
-        <div className="mb-4">
+        <div className="mb-4 flex-grow overflow-y-auto">
           <div className="flex justify-between items-center mb-1">
             <label className="block text-sm font-medium text-gray-400">
               Template JSON
             </label>
-            <div className="flex items-center">
-              <span className="text-xs text-gray-400 mr-2">Use Editor</span>
-              <input
-                type="checkbox"
-                checked={useEditor}
-                onChange={handleToggleChange}
-                className="form-checkbox h-4 w-4 text-purple-600 transition duration-150 ease-in-out"
-              />
-            </div>
+            <button
+              onClick={handleToggleChange}
+              className={`px-3 py-1 text-xs rounded transition ${
+                useEditor
+                  ? "bg-purple-600 text-white hover:bg-purple-700"
+                  : "bg-gray-600 text-white hover:bg-gray-500"
+              }`}
+            >
+              {useEditor ? "Use Text Input" : "Use Editor"}
+            </button>
           </div>
-          {useEditor ? (
-            <JsonEditor
-              data={templateJson}
-              setData={setTemplateJson}
-              theme={githubDarkTheme}
-            />
-          ) : (
-            <textarea
-              className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
-              rows={10}
-              value={textAreaContent}
-              onChange={handleTextAreaChange}
-              placeholder="Enter JSON here"
-            />
-          )}
+          <div className="max-h-[40vh] overflow-y-auto">
+            {useEditor ? (
+              <JsonEditor
+                data={templateJson}
+                setData={setTemplateJson}
+                theme={githubDarkTheme}
+              />
+            ) : (
+              <textarea
+                className="w-full px-3 py-2 rounded bg-gray-700 text-white border border-gray-600 focus:outline-none focus:ring-2 focus:ring-purple-500 font-mono text-sm"
+                rows={10}
+                value={textAreaContent}
+                onChange={handleTextAreaChange}
+                placeholder="Enter JSON here"
+              />
+            )}
+          </div>
         </div>
         {saveStatus === "error" && (
           <div className="mb-2 text-red-400 text-sm">{saveError}</div>
         )}
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-2 mt-4 flex-shrink-0">
           <button
             className="px-4 py-2 bg-gray-600 text-white rounded hover:bg-gray-500 transition"
             onClick={onClose}
