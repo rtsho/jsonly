@@ -1,6 +1,25 @@
 import React, { useEffect, useState } from 'react';
 import { useAppContext } from '../context/AppContext';
 import { getUserDocumentAnalyses, getUserDocument } from '../services/firebase';
+import { Bar } from 'react-chartjs-2';
+import {
+  Chart as ChartJS,
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend,
+} from 'chart.js';
+
+ChartJS.register(
+  CategoryScale,
+  LinearScale,
+  BarElement,
+  Title,
+  Tooltip,
+  Legend
+);
 
 interface DocumentAnalysis {
   id: string;
@@ -100,15 +119,15 @@ const UsagePage: React.FC = () => {
           setPagesRemaining(0); // Basic plan is pay-as-you-go
         }
 
-        // Prepare chart data (last 30 days)
-        const last30Days = new Date();
-        last30Days.setDate(last30Days.getDate() - 30);
+        // Prepare chart data (last 14 days)
+        const last14Days = new Date();
+        last14Days.setDate(last14Days.getDate() - 14);
         
-        // Create a map for each day in the last 30 days
+        // Create a map for each day in the last 14 days
         const dailyUsageMap = new Map<string, number>();
         
         // Initialize with zero values for all days
-        for (let i = 0; i < 30; i++) {
+        for (let i = 0; i < 14; i++) {
           const date = new Date();
           date.setDate(date.getDate() - i);
           const dateStr = date.toISOString().split('T')[0];
@@ -118,7 +137,7 @@ const UsagePage: React.FC = () => {
         // Fill in actual usage data
         analysesData.forEach(analysis => {
           const analysisDate = new Date(analysis.runAt);
-          if (analysisDate >= last30Days) {
+          if (analysisDate >= last14Days) {
             const dateStr = analysisDate.toISOString().split('T')[0];
             const currentPages = dailyUsageMap.get(dateStr) || 0;
             dailyUsageMap.set(dateStr, currentPages + (analysis.nbPages || 0));
@@ -159,9 +178,6 @@ const UsagePage: React.FC = () => {
     const date = new Date(dateString);
     return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
   };
-
-  // Find the maximum pages value for scaling the chart
-  const maxPages = Math.max(...chartData.map(item => item.pages), 1);
 
   if (loading) {
     return (
@@ -224,31 +240,88 @@ const UsagePage: React.FC = () => {
         </div>
       </div>
 
-      {/* Usage Chart - Simple CSS-based chart */}
+      {/* Usage Chart - Chart.js */}
       <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 mb-12">
-        <h3 className="text-xl font-semibold text-white mb-6">Usage Over Time (Last 30 Days)</h3>
+        <h3 className="text-xl font-semibold text-white mb-6">Usage Over Time (Last 14 Days)</h3>
         
-        <div className="overflow-x-auto">
-          <div className="min-w-full" style={{ height: '300px', display: 'flex', alignItems: 'flex-end', gap: '2px' }}>
-            {chartData.map((item, index) => {
-              const height = (item.pages / maxPages) * 100;
-              return (
-                <div key={index} style={{ flex: '1', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                  <div 
-                    className="bg-purple-600 hover:bg-purple-500 transition-colors duration-200 w-full rounded-t"
-                    style={{ height: `${height}%`, minHeight: item.pages > 0 ? '5px' : '0' }}
-                    title={`${item.pages} pages on ${formatChartDate(item.date)}`}
-                  ></div>
-                  {index % 5 === 0 && (
-                    <div className="text-xs text-gray-400 mt-2 rotate-45 origin-left">
-                      {formatChartDate(item.date)}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+        {chartData.length === 0 ? (
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-400">No usage data available for the last 14 days.</p>
           </div>
-        </div>
+        ) : (
+          <div className="h-80"> {/* Increased height for better chart display */}
+            <Bar
+              data={{
+                labels: chartData.map(item => formatChartDate(item.date)),
+                datasets: [
+                  {
+                    label: 'Pages Processed',
+                    data: chartData.map(item => item.pages),
+                    backgroundColor: 'rgba(139, 92, 246, 0.8)', // Purple with some transparency
+                    borderColor: 'rgba(139, 92, 246, 1)',
+                    borderWidth: 1,
+                  },
+                ],
+              }}
+              options={{
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                  legend: {
+                    position: 'top' as const,
+                    labels: {
+                      color: '#aaa', // Gray text for legend
+                    },
+                  },
+                  title: {
+                    display: false, // Title is already in h3
+                  },
+                  tooltip: {
+                    callbacks: {
+                      label: function(context) {
+                        let label = context.dataset.label || '';
+                        if (label) {
+                          label += ': ';
+                        }
+                        if (context.parsed.y !== null) {
+                          label += context.parsed.y + ' pages';
+                        }
+                        return label;
+                      }
+                    },
+                    bodyColor: '#fff', // White text for tooltip body
+                    titleColor: '#fff', // White text for tooltip title
+                    backgroundColor: '#333', // Dark background for tooltip
+                    borderColor: '#555', // Gray border for tooltip
+                    borderWidth: 1,
+                  }
+                },
+                scales: {
+                  x: {
+                    ticks: {
+                      color: '#aaa', // Gray text for x-axis labels
+                      maxRotation: 45,
+                      minRotation: 45,
+                    },
+                    grid: {
+                      color: '#444', // Darker gray grid lines
+                    },
+                  },
+                  y: {
+                    ticks: {
+                      color: '#aaa', // Gray text for y-axis labels
+                      beginAtZero: true,
+                      stepSize: 1, // Display ticks at integer intervals
+                    },
+                    grid: {
+                      color: '#444', // Darker gray grid lines
+                    },
+                  },
+                },
+              }}
+            />
+          </div>
+        )}
       </div>
 
       {/* Recent Activity Table */}
