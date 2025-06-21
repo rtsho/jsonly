@@ -11,6 +11,8 @@ import TemplatePage from './pages/TemplatePage';
 import CredentialsPage from './pages/CredentialsPage';
 import UsagePage from './pages/UsagePage';
 import SubscriptionPage from './pages/SubscriptionPage';
+import PrivacyNotice from './pages/PrivacyNotice'; // Assuming .md files are handled or converted
+import TermsOfService from './pages/TermsOfService'; // Assuming .md files are handled or converted
 
 function AppWithModal() {
   const [isSidebarCollapsed, setIsSidebarCollapsed] = React.useState(false);
@@ -34,8 +36,14 @@ function AppWithModal() {
             <Route path="/credentials" element={<CredentialsPage />} />
             <Route path="/usage" element={<UsagePage />} />
             <Route path="/subscription" element={<SubscriptionPage />} />
+            <Route path="/privacy" element={<PrivacyNotice />} />
+            <Route path="/terms" element={<TermsOfService />} />
           </Routes>
-          <footer className="mt-16 text-center text-gray-400 text-sm">
+          <footer className="w-full text-center py-4 text-gray-400 text-sm border-t border-gray-800 mt-8">
+            <div className="mb-2">
+              <a href="/privacy" className="hover:underline mx-2">Privacy Notice</a> |
+              <a href="/terms" className="hover:underline mx-2">Terms of Service</a>
+            </div>
             <p>© {new Date().getFullYear()} JSONly. All rights reserved.</p>
           </footer>
         </div>
