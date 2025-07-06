@@ -13,6 +13,9 @@ from contextlib import asynccontextmanager
 import asyncio
 import uuid
 import uvicorn
+from pathlib import Path
+import json
+
 
 # Firebase Admin SDK imports
 import firebase_admin
@@ -34,7 +37,11 @@ async def lifespan(app: FastAPI):
 
 # Initialize Firebase Admin SDK
 if not firebase_admin._apps:
-    cred = credentials.Certificate("serviceAccountKey.json")
+    service_account_file = Path("serviceAccountKey.json")
+    if service_account_file.exists():
+        cred = credentials.Certificate("serviceAccountKey.json")
+    else:
+        cred = credentials.Certificate(json.loads(os.environ['SERVICE_ACCOUNT_KEY']))
     firebase_admin.initialize_app(cred)
 
 db = firestore.client()
