@@ -262,7 +262,7 @@ async def _do_extract(
 @app.post("/extract")
 async def extract(
     file: UploadFile = File(...),
-    entity=Depends(get_current_user)
+    entity=Depends(get_current_entity)
 ):
     """
     Receives a document (PDF or CSV) and processes it for AI summarization.
@@ -318,7 +318,7 @@ def get_template(template_id: str):
 async def extract_with_template(
     file: UploadFile = File(...),
     template_id: str = Body(...), # Accept template ID
-    user=Depends(get_current_user)
+    user=Depends(get_current_entity)
 ):
     """
     Receives a document (PDF or CSV) and processes it for AI summarization using a template.
@@ -430,7 +430,7 @@ async def read_root():
     return {"message": "FastAPI backend is running"}
 
 def main():
-    uvicorn.run("app:app", host="127.0.0.1", port=8000, reload=False)
+    uvicorn.run("app:app", host="0.0.0.0", port=8080, reload=True)
 
 if __name__ == '__main__':
     main()
