@@ -24,7 +24,7 @@ VALID_CLIENTS = {
     "partner_backend": "secure_token_123"
 }
 
-SERVER_URL = config('SERVER_URL')
+SERVER_URL = config('SERVER_URL', default='https://jsonly-backend.fly.dev')
 
 
 async def lifespan(app: FastAPI):
